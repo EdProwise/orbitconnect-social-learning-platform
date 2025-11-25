@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { User, Lock, Bell, Eye, X, Plus } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { User, Lock, Bell, Eye, X, Plus, Camera, Upload } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 
@@ -16,6 +18,9 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showImageUpload, setShowImageUpload] = useState<'avatar' | 'cover' | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [profileForm, setProfileForm] = useState({
     name: '',
     email: '',
@@ -94,6 +99,60 @@ export default function SettingsPage() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedFile && !previewUrl) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    try {
+      const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+      const field = showImageUpload === 'avatar' ? 'avatar' : 'coverImage';
+      
+      // For demo purposes, we'll use the preview URL (base64)
+      // In production, you'd upload to a storage service first
+      const updated = await apiRequest(`/api/users?id=${user.userId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ [field]: previewUrl }),
+      });
+      
+      setCurrentUser(updated);
+      setShowImageUpload(null);
+      setSelectedFile(null);
+      setPreviewUrl('');
+      toast.success(`${showImageUpload === 'avatar' ? 'Profile' : 'Cover'} image updated!`);
+    } catch (error) {
+      console.error('Failed to update image:', error);
+      toast.error('Failed to update image');
+    }
+  };
+
   const addSchoolHistory = () => {
     setProfileForm({
       ...profileForm,
@@ -152,6 +211,55 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
+          {/* Profile & Cover Images */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Images</CardTitle>
+              <CardDescription>
+                Update your profile and cover images
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Cover Image */}
+              <div className="space-y-2">
+                <Label>Cover Image</Label>
+                <div className="relative h-32 bg-gradient-to-br from-[#854cf4] to-[#6b3cc9] rounded-lg overflow-hidden">
+                  {currentUser?.coverImage && (
+                    <img src={currentUser.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute top-2 right-2"
+                    onClick={() => setShowImageUpload('cover')}
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Change Cover
+                  </Button>
+                </div>
+              </div>
+
+              {/* Profile Image */}
+              <div className="space-y-2">
+                <Label>Profile Image</Label>
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage src={currentUser?.avatar || ''} alt={currentUser?.name} />
+                    <AvatarFallback className="text-2xl">{currentUser?.name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowImageUpload('avatar')}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload New Picture
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Profile Information */}
           <Card>
             <CardHeader>
               <CardTitle>Profile Information</CardTitle>
@@ -472,23 +580,61 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
 
-function NotificationSkeleton() {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Skeleton className="w-10 h-10 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-3 w-24" />
+      {/* Image Upload Dialog */}
+      <Dialog open={showImageUpload !== null} onOpenChange={() => {
+        setShowImageUpload(null);
+        setSelectedFile(null);
+        setPreviewUrl('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Update {showImageUpload === 'avatar' ? 'Profile' : 'Cover'} Image
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Upload Image</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Select an image file (max 5MB, JPG/PNG/GIF)
+              </p>
+            </div>
+            {previewUrl && (
+              <div className="border rounded-lg p-4">
+                <p className="text-sm font-medium mb-2">Preview:</p>
+                <img 
+                  src={previewUrl} 
+                  alt="Preview" 
+                  className={showImageUpload === 'avatar' ? 'w-32 h-32 rounded-full object-cover mx-auto' : 'w-full h-48 rounded-lg object-cover'}
+                />
+              </div>
+            )}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowImageUpload(null);
+              setSelectedFile(null);
+              setPreviewUrl('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleImageUpload}
+              disabled={!selectedFile && !previewUrl}
+              className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+            >
+              Update Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
