@@ -27,6 +27,26 @@ export default function FeedPage() {
 
   useEffect(() => {
     fetchPosts();
+
+    // Refetch posts when the page becomes visible (user returns from creating a post)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchPosts();
+      }
+    };
+
+    // Refetch posts when window regains focus
+    const handleFocus = () => {
+      fetchPosts();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const fetchPosts = async () => {
