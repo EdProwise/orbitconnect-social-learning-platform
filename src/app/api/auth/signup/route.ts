@@ -70,21 +70,26 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user - CRITICAL: Do NOT include 'id' field, only include fields with actual values
     const now = new Date().toISOString();
+    
+    const insertData: any = {
+      email: sanitizedEmail,
+      passwordHash,
+      name: name.trim(),
+      role,
+      avatar: `https://i.pravatar.cc/150?u=${sanitizedEmail}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Only add optional fields if they have values
+    if (bio?.trim()) insertData.bio = bio.trim();
+    if (schoolId) insertData.schoolId = parseInt(schoolId);
+
     const newUser = await db
       .insert(users)
-      .values({
-        email: sanitizedEmail,
-        passwordHash,
-        name: name.trim(),
-        role,
-        bio: bio?.trim() || null,
-        schoolId: schoolId ? parseInt(schoolId) : null,
-        avatar: `https://i.pravatar.cc/150?u=${sanitizedEmail}`,
-        createdAt: now,
-        updatedAt: now,
-      })
+      .values(insertData)
       .returning({
         id: users.id,
         email: users.email,

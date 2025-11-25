@@ -232,24 +232,27 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString();
 
+    // CRITICAL: Do NOT include 'id' field - SQLite will auto-generate it
     const insertData: any = {
       email: sanitizedEmail,
       passwordHash,
       name: sanitizedName,
-      avatar: avatar || null,
-      coverImage: coverImage || null,
       role,
-      bio: bio || null,
-      schoolId: schoolId ? parseInt(schoolId) : null,
-      currentTown: currentTown ? currentTown.trim() : null,
-      phone: phone ? phone.trim() : null,
-      socialMediaLinks: socialMediaLinks ? JSON.stringify(socialMediaLinks) : null,
-      class: userClass ? userClass.trim() : null,
-      schoolHistory: schoolHistory ? JSON.stringify(schoolHistory) : null,
-      aboutYourself: aboutYourself ? aboutYourself.trim() : null,
       createdAt: now,
       updatedAt: now,
     };
+
+    // Only add optional fields if they have values
+    if (avatar) insertData.avatar = avatar;
+    if (coverImage) insertData.coverImage = coverImage;
+    if (bio) insertData.bio = bio;
+    if (schoolId) insertData.schoolId = parseInt(schoolId);
+    if (currentTown) insertData.currentTown = currentTown.trim();
+    if (phone) insertData.phone = phone.trim();
+    if (socialMediaLinks) insertData.socialMediaLinks = JSON.stringify(socialMediaLinks);
+    if (userClass) insertData.class = userClass.trim();
+    if (schoolHistory) insertData.schoolHistory = JSON.stringify(schoolHistory);
+    if (aboutYourself) insertData.aboutYourself = aboutYourself.trim();
 
     const newUser = await db.insert(users)
       .values(insertData)
