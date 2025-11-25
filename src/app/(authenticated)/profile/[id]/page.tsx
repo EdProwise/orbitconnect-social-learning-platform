@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { PostCard } from '@/components/feed/post-card';
@@ -859,8 +860,4 @@ function ConnectionCard({ connection, currentUserId }: { connection: any; curren
       </CardContent>
     </Card>
   );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="text-sm font-medium">{children}</label>;
 }
