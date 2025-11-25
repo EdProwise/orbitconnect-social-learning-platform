@@ -7,13 +7,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Loader2, X, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
+
+const celebrationTypes = [
+  'Academic Achievement',
+  'Competition Win',
+  'Scholarship Received',
+  'Course Completion',
+  'Project Success',
+  'Award Received',
+  'University Acceptance',
+  'Graduation',
+  'Certification Earned',
+  'Personal Milestone',
+  'Other'
+];
 
 export default function CreateCelebratePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [celebrationType, setCelebrationType] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>(['']);
@@ -42,8 +59,13 @@ export default function CreateCelebratePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!celebrationType) {
+      toast.error('Please select what you\'re celebrating');
+      return;
+    }
+
     if (!title.trim()) {
-      alert('Please enter what you\'re celebrating');
+      toast.error('Please describe your celebration');
       return;
     }
 
@@ -54,7 +76,7 @@ export default function CreateCelebratePage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to share a celebration');
+        toast.error('Please log in to share a celebration');
         router.push('/login');
         return;
       }
@@ -64,7 +86,7 @@ export default function CreateCelebratePage() {
       const postData: any = {
         userId: user.id,
         type: 'CELEBRATE',
-        title: title.trim(),
+        title: `${celebrationType}: ${title.trim()}`,
         content: content.trim() || null,
       };
 
@@ -77,10 +99,11 @@ export default function CreateCelebratePage() {
         body: JSON.stringify(postData),
       });
 
+      toast.success('Celebration shared successfully!');
       router.push('/feed');
     } catch (error) {
       console.error('Failed to create celebration:', error);
-      alert('Failed to create celebration. Please try again.');
+      toast.error('Failed to create celebration. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -110,10 +133,26 @@ export default function CreateCelebratePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title">What are you celebrating? *</Label>
+              <Label htmlFor="celebration-type">What are you celebrating? *</Label>
+              <Select value={celebrationType} onValueChange={setCelebrationType} disabled={isSubmitting}>
+                <SelectTrigger id="celebration-type">
+                  <SelectValue placeholder="Select celebration type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {celebrationTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="title">Describe your celebration *</Label>
               <Input
                 id="title"
-                placeholder="E.g., Got accepted to university, Won a competition, Completed a course..."
+                placeholder="E.g., Got accepted to Stanford University, Won first place in coding competition..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
@@ -194,7 +233,7 @@ export default function CreateCelebratePage() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !title.trim()}
+                disabled={isSubmitting || !title.trim() || !celebrationType}
                 className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
               >
                 {isSubmitting ? (

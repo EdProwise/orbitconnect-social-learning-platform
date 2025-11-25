@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   FileText, 
   Image as ImageIcon, 
@@ -25,6 +27,17 @@ const postTypes = [
 
 export function PostComposer() {
   const router = useRouter();
+  const [userName, setUserName] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setUserName(user.name || '');
+      setUserAvatar(user.avatar || '');
+    }
+  }, []);
 
   const handlePostTypeClick = (path: string) => {
     router.push(path);
@@ -33,7 +46,13 @@ export function PostComposer() {
   return (
     <Card>
       <CardContent className="p-6">
-        <h3 className="font-semibold mb-4">Start a post</h3>
+        <div className="flex items-center gap-3 mb-4">
+          <Avatar className="w-12 h-12">
+            <AvatarImage src={userAvatar} alt={userName} />
+            <AvatarFallback>{userName[0] || 'U'}</AvatarFallback>
+          </Avatar>
+          <h3 className="font-semibold text-lg">Share your knowledge, {userName}</h3>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {postTypes.map((type) => {
             const Icon = type.icon;

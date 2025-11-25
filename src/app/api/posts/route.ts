@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, type, title, schoolId, content, mediaUrls, pollOptions, fileUrls } = body;
+    const { userId, type, title, schoolId, content, mediaUrls, pollOptions, fileUrls, knowledgePoints } = body;
 
     // Validate required fields
     if (!userId) {
@@ -198,6 +198,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate knowledgePoints if provided
+    if (knowledgePoints !== undefined && knowledgePoints !== null) {
+      const kp = parseInt(knowledgePoints);
+      if (isNaN(kp) || kp < 0 || kp > 100) {
+        return NextResponse.json({ 
+          error: "knowledgePoints must be between 0 and 100",
+          code: "INVALID_KNOWLEDGE_POINTS" 
+        }, { status: 400 });
+      }
+      if (kp % 10 !== 0) {
+        return NextResponse.json({ 
+          error: "knowledgePoints must be in multiples of 10",
+          code: "INVALID_KNOWLEDGE_POINTS_MULTIPLE" 
+        }, { status: 400 });
+      }
+    }
+
     // Prepare insert data
     const now = new Date().toISOString();
     const insertData: any = {
@@ -205,6 +222,7 @@ export async function POST(request: NextRequest) {
       type,
       title: title.trim(),
       viewCount: 0,
+      knowledgePoints: knowledgePoints !== undefined && knowledgePoints !== null ? parseInt(knowledgePoints) : 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -291,7 +309,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, title, schoolId, content, mediaUrls, pollOptions, fileUrls } = body;
+    const { type, title, schoolId, content, mediaUrls, pollOptions, fileUrls, knowledgePoints } = body;
 
     // Validate type if provided
     if (type && !VALID_POST_TYPES.includes(type)) {
@@ -318,6 +336,23 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate knowledgePoints if provided
+    if (knowledgePoints !== undefined && knowledgePoints !== null) {
+      const kp = parseInt(knowledgePoints);
+      if (isNaN(kp) || kp < 0 || kp > 100) {
+        return NextResponse.json({ 
+          error: "knowledgePoints must be between 0 and 100",
+          code: "INVALID_KNOWLEDGE_POINTS" 
+        }, { status: 400 });
+      }
+      if (kp % 10 !== 0) {
+        return NextResponse.json({ 
+          error: "knowledgePoints must be in multiples of 10",
+          code: "INVALID_KNOWLEDGE_POINTS_MULTIPLE" 
+        }, { status: 400 });
+      }
+    }
+
     // Prepare update data
     const updateData: any = {
       updatedAt: new Date().toISOString(),
@@ -327,6 +362,7 @@ export async function PUT(request: NextRequest) {
     if (title) updateData.title = title.trim();
     if (schoolId !== undefined) updateData.schoolId = schoolId ? parseInt(schoolId) : null;
     if (content !== undefined) updateData.content = content ? content.trim() : null;
+    if (knowledgePoints !== undefined) updateData.knowledgePoints = knowledgePoints !== null ? parseInt(knowledgePoints) : 0;
 
     // Handle JSON fields
     if (mediaUrls !== undefined) {

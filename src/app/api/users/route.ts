@@ -34,6 +34,12 @@ export async function GET(request: NextRequest) {
         role: users.role,
         bio: users.bio,
         schoolId: users.schoolId,
+        currentTown: users.currentTown,
+        phone: users.phone,
+        socialMediaLinks: users.socialMediaLinks,
+        class: users.class,
+        schoolHistory: users.schoolHistory,
+        aboutYourself: users.aboutYourself,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -45,7 +51,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      return NextResponse.json(user[0]);
+      // Parse JSON fields
+      const userData = user[0];
+      return NextResponse.json({
+        ...userData,
+        socialMediaLinks: userData.socialMediaLinks ? JSON.parse(userData.socialMediaLinks as string) : null,
+        schoolHistory: userData.schoolHistory ? JSON.parse(userData.schoolHistory as string) : null,
+      });
     }
 
     // List users with pagination, search, and filtering
@@ -100,6 +112,12 @@ export async function GET(request: NextRequest) {
       role: users.role,
       bio: users.bio,
       schoolId: users.schoolId,
+      currentTown: users.currentTown,
+      phone: users.phone,
+      socialMediaLinks: users.socialMediaLinks,
+      class: users.class,
+      schoolHistory: users.schoolHistory,
+      aboutYourself: users.aboutYourself,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -109,7 +127,14 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    return NextResponse.json(results);
+    // Parse JSON fields for all users
+    const parsedResults = results.map(user => ({
+      ...user,
+      socialMediaLinks: user.socialMediaLinks ? JSON.parse(user.socialMediaLinks as string) : null,
+      schoolHistory: user.schoolHistory ? JSON.parse(user.schoolHistory as string) : null,
+    }));
+
+    return NextResponse.json(parsedResults);
 
   } catch (error) {
     console.error('GET error:', error);
@@ -122,7 +147,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, role, passwordHash, avatar, coverImage, bio, schoolId } = body;
+    const { email, name, role, passwordHash, avatar, coverImage, bio, schoolId, currentTown, phone, socialMediaLinks, class: userClass, schoolHistory, aboutYourself } = body;
 
     // Validate required fields
     if (!email) {
@@ -186,21 +211,48 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate JSON fields
+    if (socialMediaLinks !== undefined && socialMediaLinks !== null) {
+      if (typeof socialMediaLinks !== 'object' || Array.isArray(socialMediaLinks)) {
+        return NextResponse.json({ 
+          error: "socialMediaLinks must be a valid object",
+          code: "INVALID_SOCIAL_MEDIA_LINKS" 
+        }, { status: 400 });
+      }
+    }
+
+    if (schoolHistory !== undefined && schoolHistory !== null) {
+      if (!Array.isArray(schoolHistory)) {
+        return NextResponse.json({ 
+          error: "schoolHistory must be an array",
+          code: "INVALID_SCHOOL_HISTORY" 
+        }, { status: 400 });
+      }
+    }
+
     const now = new Date().toISOString();
 
+    const insertData: any = {
+      email: sanitizedEmail,
+      passwordHash,
+      name: sanitizedName,
+      avatar: avatar || null,
+      coverImage: coverImage || null,
+      role,
+      bio: bio || null,
+      schoolId: schoolId ? parseInt(schoolId) : null,
+      currentTown: currentTown ? currentTown.trim() : null,
+      phone: phone ? phone.trim() : null,
+      socialMediaLinks: socialMediaLinks ? JSON.stringify(socialMediaLinks) : null,
+      class: userClass ? userClass.trim() : null,
+      schoolHistory: schoolHistory ? JSON.stringify(schoolHistory) : null,
+      aboutYourself: aboutYourself ? aboutYourself.trim() : null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     const newUser = await db.insert(users)
-      .values({
-        email: sanitizedEmail,
-        passwordHash,
-        name: sanitizedName,
-        avatar: avatar || null,
-        coverImage: coverImage || null,
-        role,
-        bio: bio || null,
-        schoolId: schoolId ? parseInt(schoolId) : null,
-        createdAt: now,
-        updatedAt: now,
-      })
+      .values(insertData)
       .returning({
         id: users.id,
         email: users.email,
@@ -210,11 +262,23 @@ export async function POST(request: NextRequest) {
         role: users.role,
         bio: users.bio,
         schoolId: users.schoolId,
+        currentTown: users.currentTown,
+        phone: users.phone,
+        socialMediaLinks: users.socialMediaLinks,
+        class: users.class,
+        schoolHistory: users.schoolHistory,
+        aboutYourself: users.aboutYourself,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       });
 
-    return NextResponse.json(newUser[0], { status: 201 });
+    // Parse JSON fields in response
+    const userData = newUser[0];
+    return NextResponse.json({
+      ...userData,
+      socialMediaLinks: userData.socialMediaLinks ? JSON.parse(userData.socialMediaLinks as string) : null,
+      schoolHistory: userData.schoolHistory ? JSON.parse(userData.schoolHistory as string) : null,
+    }, { status: 201 });
 
   } catch (error) {
     console.error('POST error:', error);
@@ -247,7 +311,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, name, role, passwordHash, avatar, coverImage, bio, schoolId } = body;
+    const { email, name, role, passwordHash, avatar, coverImage, bio, schoolId, currentTown, phone, socialMediaLinks, class: userClass, schoolHistory, aboutYourself } = body;
 
     // Validate role if provided
     if (role && !VALID_ROLES.includes(role)) {
@@ -281,6 +345,25 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate JSON fields
+    if (socialMediaLinks !== undefined && socialMediaLinks !== null) {
+      if (typeof socialMediaLinks !== 'object' || Array.isArray(socialMediaLinks)) {
+        return NextResponse.json({ 
+          error: "socialMediaLinks must be a valid object",
+          code: "INVALID_SOCIAL_MEDIA_LINKS" 
+        }, { status: 400 });
+      }
+    }
+
+    if (schoolHistory !== undefined && schoolHistory !== null) {
+      if (!Array.isArray(schoolHistory)) {
+        return NextResponse.json({ 
+          error: "schoolHistory must be an array",
+          code: "INVALID_SCHOOL_HISTORY" 
+        }, { status: 400 });
+      }
+    }
+
     // Build update object with only provided fields
     const updates: Record<string, any> = {
       updatedAt: new Date().toISOString(),
@@ -294,6 +377,12 @@ export async function PUT(request: NextRequest) {
     if (coverImage !== undefined) updates.coverImage = coverImage;
     if (bio !== undefined) updates.bio = bio;
     if (schoolId !== undefined) updates.schoolId = schoolId ? parseInt(schoolId) : null;
+    if (currentTown !== undefined) updates.currentTown = currentTown ? currentTown.trim() : null;
+    if (phone !== undefined) updates.phone = phone ? phone.trim() : null;
+    if (socialMediaLinks !== undefined) updates.socialMediaLinks = socialMediaLinks ? JSON.stringify(socialMediaLinks) : null;
+    if (userClass !== undefined) updates.class = userClass ? userClass.trim() : null;
+    if (schoolHistory !== undefined) updates.schoolHistory = schoolHistory ? JSON.stringify(schoolHistory) : null;
+    if (aboutYourself !== undefined) updates.aboutYourself = aboutYourself ? aboutYourself.trim() : null;
 
     const updated = await db.update(users)
       .set(updates)
@@ -307,11 +396,23 @@ export async function PUT(request: NextRequest) {
         role: users.role,
         bio: users.bio,
         schoolId: users.schoolId,
+        currentTown: users.currentTown,
+        phone: users.phone,
+        socialMediaLinks: users.socialMediaLinks,
+        class: users.class,
+        schoolHistory: users.schoolHistory,
+        aboutYourself: users.aboutYourself,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       });
 
-    return NextResponse.json(updated[0]);
+    // Parse JSON fields in response
+    const userData = updated[0];
+    return NextResponse.json({
+      ...userData,
+      socialMediaLinks: userData.socialMediaLinks ? JSON.parse(userData.socialMediaLinks as string) : null,
+      schoolHistory: userData.schoolHistory ? JSON.parse(userData.schoolHistory as string) : null,
+    });
 
   } catch (error) {
     console.error('PUT error:', error);

@@ -15,6 +15,13 @@
       "when": 1764087616760,
       "tag": "0001_silent_ultragirl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1764088098000,
+      "tag": "0002_elite_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

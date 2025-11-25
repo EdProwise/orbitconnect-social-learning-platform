@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
   Heart, 
   MessageCircle, 
@@ -25,10 +26,13 @@ import {
   HelpCircle,
   Trophy,
   BarChart3,
-  Gift
+  Gift,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 interface Post {
   id: number;
@@ -92,6 +96,16 @@ export function PostCard({ post }: PostCardProps) {
   const [pollVotes, setPollVotes] = useState<Record<number, number>>({});
   const [userVote, setUserVote] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState(post.title);
+  const [editContent, setEditContent] = useState(post.content || '');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Get current user
+  const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+  const isAuthor = currentUser && currentUser.id === post.userId;
 
   useEffect(() => {
     fetchAuthor();
@@ -183,8 +197,56 @@ export function PostCard({ post }: PostCardProps) {
       });
       fetchReactions();
       setUserReaction(type);
+      setShowReactionPicker(false);
+      toast.success(`Reacted with ${type.toLowerCase()}`);
     } catch (error) {
       console.error('Failed to add reaction:', error);
+      toast.error('Failed to add reaction');
+    }
+  };
+
+  const handleEditPost = async () => {
+    if (!editTitle.trim()) {
+      toast.error('Title cannot be empty');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await apiRequest(`/api/posts?id=${post.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          content: editContent.trim() || null,
+        }),
+      });
+      
+      // Update local post data
+      post.title = editTitle.trim();
+      post.content = editContent.trim() || null;
+      
+      setIsEditMode(false);
+      toast.success('Post updated successfully!');
+    } catch (error) {
+      console.error('Failed to update post:', error);
+      toast.error('Failed to update post');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      await apiRequest(`/api/posts?id=${post.id}`, {
+        method: 'DELETE',
+      });
+      toast.success('Post deleted successfully!');
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+      toast.error('Failed to delete post');
     }
   };
 
@@ -271,115 +333,165 @@ export function PostCard({ post }: PostCardProps) {
               </Badge>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="flex-shrink-0">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
+          {isAuthor && (
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={() => setIsEditMode(true)}>
+                <Edit2 className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleDeletePost}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          )}
+          {!isAuthor && (
+            <Button variant="ghost" size="icon" className="flex-shrink-0">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Post Content */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold">{post.title}</h3>
-          {post.content && (
-            <>
-              {post.type === 'ARTICLE' ? (
-                <div 
-                  className="prose prose-sm max-w-none text-sm text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: post.content }}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
-              )}
-            </>
-          )}
-
-          {/* Media */}
-          {post.mediaUrls && post.mediaUrls.length > 0 && (
-            <div className={`grid gap-2 ${post.mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-              {post.mediaUrls.slice(0, 4).map((url, index) => (
-                <div 
-                  key={index} 
-                  className={`rounded-lg overflow-hidden bg-muted ${
-                    post.mediaUrls!.length === 1 ? 'aspect-video' : 'aspect-square'
-                  }`}
-                >
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
-              {post.mediaUrls.length > 4 && (
-                <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                  <span className="text-2xl font-semibold text-muted-foreground">
-                    +{post.mediaUrls.length - 4}
-                  </span>
-                </div>
-              )}
+        {isEditMode ? (
+          <div className="space-y-4 mb-4">
+            <Input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Title"
+              disabled={isUpdating}
+            />
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Content (optional)"
+              rows={4}
+              disabled={isUpdating}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditMode(false);
+                  setEditTitle(post.title);
+                  setEditContent(post.content || '');
+                }}
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditPost}
+                disabled={isUpdating}
+                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+              </Button>
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">{post.title}</h3>
+            {post.content && (
+              <>
+                {post.type === 'ARTICLE' ? (
+                  <div 
+                    className="prose prose-sm max-w-none text-sm text-muted-foreground"
+                    dangerouslySetInnerHTML={{ __html: post.content }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+                )}
+              </>
+            )}
 
-          {/* Poll with Voting */}
-          {post.type === 'POLL' && post.pollOptions && post.pollOptions.length > 0 && (
-            <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
-              {post.pollOptions.map((option: any, index: number) => {
-                const optionText = typeof option === 'string' ? option : option.text;
-                const percentage = getVotePercentage(index);
-                const isUserVote = userVote === index;
-
-                return (
-                  <div key={index}>
-                    <Button
-                      variant="outline"
-                      className={`w-full justify-start h-auto py-3 relative overflow-hidden ${
-                        hasVoted ? 'cursor-default' : 'hover:bg-accent'
-                      } ${isUserVote ? 'border-[#854cf4] bg-[#854cf4]/5' : ''}`}
-                      onClick={() => handlePollVote(index)}
-                      disabled={hasVoted}
-                    >
-                      {hasVoted && (
-                        <div 
-                          className="absolute left-0 top-0 bottom-0 bg-[#854cf4]/10 transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      )}
-                      <div className="flex items-center justify-between w-full relative z-10">
-                        <span className="text-sm font-medium">{optionText}</span>
-                        {hasVoted && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold">{percentage}%</span>
-                            <span className="text-xs text-muted-foreground">
-                              ({pollVotes[index] || 0} {pollVotes[index] === 1 ? 'vote' : 'votes'})
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </Button>
+            {/* Media */}
+            {post.mediaUrls && post.mediaUrls.length > 0 && (
+              <div className={`grid gap-2 ${post.mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                {post.mediaUrls.slice(0, 4).map((url, index) => (
+                  <div 
+                    key={index} 
+                    className={`rounded-lg overflow-hidden bg-muted ${
+                      post.mediaUrls!.length === 1 ? 'aspect-video' : 'aspect-square'
+                    }`}
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" />
                   </div>
-                );
-              })}
-              {hasVoted && (
-                <p className="text-xs text-muted-foreground text-center pt-2">
-                  {getTotalVotes()} total {getTotalVotes() === 1 ? 'vote' : 'votes'}
-                </p>
-              )}
-            </div>
-          )}
+                ))}
+                {post.mediaUrls.length > 4 && (
+                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
+                    <span className="text-2xl font-semibold text-muted-foreground">
+                      +{post.mediaUrls.length - 4}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* Files */}
-          {post.fileUrls && post.fileUrls.length > 0 && (
-            <div className="space-y-2">
-              {post.fileUrls.map((url, index) => (
-                <a
-                  key={index}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-3 rounded-lg border border-border hover:bg-accent transition-colors"
-                >
-                  <BookOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm flex-1 truncate">{url.split('/').pop() || 'Download file'}</span>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
+            {/* Poll with Voting */}
+            {post.type === 'POLL' && post.pollOptions && post.pollOptions.length > 0 && (
+              <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
+                {post.pollOptions.map((option: any, index: number) => {
+                  const optionText = typeof option === 'string' ? option : option.text;
+                  const percentage = getVotePercentage(index);
+                  const isUserVote = userVote === index;
+
+                  return (
+                    <div key={index}>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start h-auto py-3 relative overflow-hidden ${
+                          hasVoted ? 'cursor-default' : 'hover:bg-accent'
+                        } ${isUserVote ? 'border-[#854cf4] bg-[#854cf4]/5' : ''}`}
+                        onClick={() => handlePollVote(index)}
+                        disabled={hasVoted}
+                      >
+                        {hasVoted && (
+                          <div 
+                            className="absolute left-0 top-0 bottom-0 bg-[#854cf4]/10 transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        )}
+                        <div className="flex items-center justify-between w-full relative z-10">
+                          <span className="text-sm font-medium">{optionText}</span>
+                          {hasVoted && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold">{percentage}%</span>
+                              <span className="text-xs text-muted-foreground">
+                                ({pollVotes[index] || 0} {pollVotes[index] === 1 ? 'vote' : 'votes'})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Button>
+                    </div>
+                  );
+                })}
+                {hasVoted && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    {getTotalVotes()} total {getTotalVotes() === 1 ? 'vote' : 'votes'}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Files */}
+            {post.fileUrls && post.fileUrls.length > 0 && (
+              <div className="space-y-2">
+                {post.fileUrls.map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 rounded-lg border border-border hover:bg-accent transition-colors"
+                  >
+                    <BookOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm flex-1 truncate">{url.split('/').pop() || 'Download file'}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Reactions Summary */}
         <div className="flex items-center gap-4 pt-4 mt-4 border-t border-border text-xs text-muted-foreground">
@@ -388,29 +500,42 @@ export function PostCard({ post }: PostCardProps) {
           <span>{post.viewCount} views</span>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Collapsed Reactions */}
         <div className="flex items-center gap-2 pt-4 border-t border-border mt-2">
-          {reactionTypes.map((reaction) => {
-            const Icon = reaction.icon;
-            const count = getReactionCount(reaction.type);
-            const isActive = userReaction === reaction.type;
-
-            return (
-              <Button
-                key={reaction.type}
-                variant="ghost"
-                size="sm"
-                className={`flex-1 ${isActive ? reaction.color : ''}`}
-                onClick={() => handleReaction(reaction.type)}
-              >
-                <Icon className="w-4 h-4 mr-1" />
-                <span className="text-xs">{count > 0 ? count : reaction.label}</span>
-              </Button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-2 pt-2">
+          <div className="relative flex-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`w-full ${userReaction === 'LIKE' ? 'text-blue-500' : ''}`}
+              onClick={() => setShowReactionPicker(!showReactionPicker)}
+            >
+              <ThumbsUp className="w-4 h-4 mr-2" />
+              <span className="text-xs">
+                {userReaction ? reactionTypes.find(r => r.type === userReaction)?.label : 'Like'}
+              </span>
+            </Button>
+            
+            {showReactionPicker && (
+              <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-lg shadow-lg p-2 flex gap-2 z-10">
+                {reactionTypes.map((reaction) => {
+                  const Icon = reaction.icon;
+                  return (
+                    <Button
+                      key={reaction.type}
+                      variant="ghost"
+                      size="sm"
+                      className={`flex flex-col items-center gap-1 hover:bg-accent ${reaction.color}`}
+                      onClick={() => handleReaction(reaction.type)}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="text-xs">{reaction.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          
           <Button
             variant="ghost"
             size="sm"

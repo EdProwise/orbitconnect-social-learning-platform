@@ -12,7 +12,6 @@ import {
   GraduationCap,
   BookOpen,
   Bookmark,
-  Settings,
 } from 'lucide-react';
 import { JWTPayload } from '@/lib/auth';
 
@@ -22,14 +21,13 @@ interface LeftSidebarProps {
 
 const navigationItems = [
   { name: 'Home', href: '/feed', icon: Home },
-  { name: 'Profiles', href: '/profiles', icon: Users },
-  { name: 'Schools', href: '/schools', icon: School },
+  { name: 'Meet GenZ', href: '/profiles', icon: Users },
+  { name: 'Discover School', href: '/schools', icon: School },
   { name: 'Organize', href: '/organize', icon: Calendar },
   { name: 'Mentorship', href: '/mentorship', icon: UserCheck },
   { name: 'Tutors', href: '/tutors', icon: GraduationCap },
   { name: 'Courses', href: '/courses', icon: BookOpen },
   { name: 'Saved', href: '/saved', icon: Bookmark },
-  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function LeftSidebar({ user }: LeftSidebarProps) {

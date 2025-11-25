@@ -28,6 +28,12 @@ export const users = sqliteTable('users', {
   role: text('role').notNull(), // 'STUDENT'|'TEACHER'|'SCHOOL'|'ADMIN'
   bio: text('bio'),
   schoolId: integer('school_id').references(() => schools.id),
+  currentTown: text('current_town'),
+  phone: text('phone'),
+  socialMediaLinks: text('social_media_links', { mode: 'json' }),
+  class: text('class'),
+  schoolHistory: text('school_history', { mode: 'json' }),
+  aboutYourself: text('about_yourself'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -44,6 +50,7 @@ export const posts = sqliteTable('posts', {
   pollOptions: text('poll_options', { mode: 'json' }),
   fileUrls: text('file_urls', { mode: 'json' }),
   viewCount: integer('view_count').notNull().default(0),
+  knowledgePoints: integer('knowledge_points').notNull().default(0),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -215,3 +222,20 @@ export const tutors = sqliteTable('tutors', {
   totalStudents: integer('total_students').notNull().default(0),
   bio: text('bio'),
 });
+
+// Tags table
+export const tags = sqliteTable('tags', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  trendingScore: integer('trending_score').notNull().default(0),
+  createdAt: text('created_at').notNull(),
+});
+
+// Post Tags table (many-to-many relationship)
+export const postTags = sqliteTable('post_tags', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  postId: integer('post_id').notNull().references(() => posts.id),
+  tagId: integer('tag_id').notNull().references(() => tags.id),
+}, (table) => ({
+  postTagIdx: index('post_tag_idx').on(table.postId, table.tagId),
+}));
