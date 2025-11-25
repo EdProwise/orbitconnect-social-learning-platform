@@ -24,6 +24,10 @@ import {
   Edit2,
   Save,
   X,
+  Phone as PhoneIcon,
+  Briefcase,
+  GraduationCap,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
@@ -39,6 +43,12 @@ interface UserProfile {
   bio: string | null;
   schoolId: number | null;
   createdAt: string;
+  currentTown?: string | null;
+  phone?: string | null;
+  socialMediaLinks?: { instagram?: string; twitter?: string; linkedin?: string } | null;
+  class?: string | null;
+  schoolHistory?: Array<{ schoolName: string; from: string; to: string }> | null;
+  aboutYourself?: string | null;
 }
 
 export default function ProfilePage() {
@@ -52,7 +62,16 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', bio: '' });
+  const [editForm, setEditForm] = useState({
+    name: '',
+    bio: '',
+    currentTown: '',
+    phone: '',
+    socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
+    class: '',
+    schoolHistory: [{ schoolName: '', from: '', to: '' }],
+    aboutYourself: '',
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState<'avatar' | 'cover' | null>(null);
   const [imageUrl, setImageUrl] = useState('');
@@ -77,7 +96,16 @@ export default function ProfilePage() {
       ]);
 
       setProfile(profileData);
-      setEditForm({ name: profileData.name, bio: profileData.bio || '' });
+      setEditForm({
+        name: profileData.name,
+        bio: profileData.bio || '',
+        currentTown: profileData.currentTown || '',
+        phone: profileData.phone || '',
+        socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
+        class: profileData.class || '',
+        schoolHistory: profileData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
+        aboutYourself: profileData.aboutYourself || '',
+      });
       setPosts(postsData);
       setConnections(connectionsData);
 
@@ -111,6 +139,16 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async () => {
+    // Validate character limits
+    if (editForm.bio.length > 250) {
+      toast.error('Bio must be 250 characters or less');
+      return;
+    }
+    if (editForm.aboutYourself.length > 1000) {
+      toast.error('About Yourself must be 1000 characters or less');
+      return;
+    }
+
     try {
       setIsSaving(true);
       const updated = await apiRequest(`/api/users?id=${userId}`, {
@@ -150,6 +188,24 @@ export default function ProfilePage() {
     }
   };
 
+  const addSchoolHistory = () => {
+    setEditForm({
+      ...editForm,
+      schoolHistory: [...editForm.schoolHistory, { schoolName: '', from: '', to: '' }],
+    });
+  };
+
+  const removeSchoolHistory = (index: number) => {
+    const newHistory = editForm.schoolHistory.filter((_, i) => i !== index);
+    setEditForm({ ...editForm, schoolHistory: newHistory });
+  };
+
+  const updateSchoolHistory = (index: number, field: string, value: string) => {
+    const newHistory = [...editForm.schoolHistory];
+    newHistory[index] = { ...newHistory[index], [field]: value };
+    setEditForm({ ...editForm, schoolHistory: newHistory });
+  };
+
   if (isLoading) {
     return <ProfileSkeleton />;
   }
@@ -161,6 +217,8 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const isStudent = profile.role === 'STUDENT';
 
   return (
     <div className="space-y-6">
@@ -232,7 +290,16 @@ export default function ProfilePage() {
                             variant="outline"
                             onClick={() => {
                               setIsEditMode(false);
-                              setEditForm({ name: profile.name, bio: profile.bio || '' });
+                              setEditForm({
+                                name: profile.name,
+                                bio: profile.bio || '',
+                                currentTown: profile.currentTown || '',
+                                phone: profile.phone || '',
+                                socialMediaLinks: profile.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
+                                class: profile.class || '',
+                                schoolHistory: profile.schoolHistory || [{ schoolName: '', from: '', to: '' }],
+                                aboutYourself: profile.aboutYourself || '',
+                              });
                             }}
                           >
                             <X className="w-4 h-4 mr-2" />
@@ -283,13 +350,25 @@ export default function ProfilePage() {
 
           {/* Bio */}
           {isEditMode ? (
-            <Textarea
-              value={editForm.bio}
-              onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-              placeholder="Write a bio..."
-              className="mb-4"
-              rows={3}
-            />
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Bio</label>
+                <span className="text-xs text-muted-foreground">
+                  {editForm.bio.length}/250 characters
+                </span>
+              </div>
+              <Textarea
+                value={editForm.bio}
+                onChange={(e) => {
+                  if (e.target.value.length <= 250) {
+                    setEditForm({ ...editForm, bio: e.target.value });
+                  }
+                }}
+                placeholder="Write a short bio..."
+                rows={2}
+                maxLength={250}
+              />
+            </div>
           ) : profile.bio ? (
             <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>
           ) : isOwnProfile ? (
@@ -329,18 +408,253 @@ export default function ProfilePage() {
           <Card>
             <CardContent className="p-6">
               <h3 className="font-semibold mb-4">About</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span>{profile.email}</span>
-                </div>
-                {school && (
-                  <div className="flex items-center gap-3">
-                    <SchoolIcon className="w-4 h-4 text-muted-foreground" />
-                    <span>{school.name}</span>
+              
+              {isEditMode && isStudent ? (
+                <div className="space-y-4">
+                  {/* Current Town */}
+                  <div className="space-y-2">
+                    <Label>Current Town</Label>
+                    <Input
+                      value={editForm.currentTown}
+                      onChange={(e) => setEditForm({ ...editForm, currentTown: e.target.value })}
+                      placeholder="e.g., Mumbai"
+                    />
                   </div>
-                )}
-              </div>
+
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <Label>Phone Number</Label>
+                    <Input
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      placeholder="e.g., +91 98765 43210"
+                    />
+                  </div>
+
+                  {/* Class */}
+                  <div className="space-y-2">
+                    <Label>Class</Label>
+                    <Input
+                      value={editForm.class}
+                      onChange={(e) => setEditForm({ ...editForm, class: e.target.value })}
+                      placeholder="e.g., Class 10 / Year 2"
+                    />
+                  </div>
+
+                  {/* Social Media Links */}
+                  <div className="space-y-2">
+                    <Label>Social Media Links</Label>
+                    <div className="space-y-2">
+                      <Input
+                        value={editForm.socialMediaLinks.instagram || ''}
+                        onChange={(e) => setEditForm({
+                          ...editForm,
+                          socialMediaLinks: { ...editForm.socialMediaLinks, instagram: e.target.value }
+                        })}
+                        placeholder="Instagram username or URL"
+                      />
+                      <Input
+                        value={editForm.socialMediaLinks.twitter || ''}
+                        onChange={(e) => setEditForm({
+                          ...editForm,
+                          socialMediaLinks: { ...editForm.socialMediaLinks, twitter: e.target.value }
+                        })}
+                        placeholder="Twitter/X username or URL"
+                      />
+                      <Input
+                        value={editForm.socialMediaLinks.linkedin || ''}
+                        onChange={(e) => setEditForm({
+                          ...editForm,
+                          socialMediaLinks: { ...editForm.socialMediaLinks, linkedin: e.target.value }
+                        })}
+                        placeholder="LinkedIn profile URL"
+                      />
+                    </div>
+                  </div>
+
+                  {/* School History */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>School History</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={addSchoolHistory}
+                      >
+                        Add School
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      {editForm.schoolHistory.map((school, index) => (
+                        <div key={index} className="p-4 border rounded-lg space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">School {index + 1}</span>
+                            {editForm.schoolHistory.length > 1 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeSchoolHistory(index)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <Input
+                            value={school.schoolName}
+                            onChange={(e) => updateSchoolHistory(index, 'schoolName', e.target.value)}
+                            placeholder="School Name"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={school.from}
+                              onChange={(e) => updateSchoolHistory(index, 'from', e.target.value)}
+                              placeholder="From (e.g., 2020)"
+                            />
+                            <Input
+                              value={school.to}
+                              onChange={(e) => updateSchoolHistory(index, 'to', e.target.value)}
+                              placeholder="To (e.g., 2024)"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* About Yourself */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>About Yourself</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {editForm.aboutYourself.length}/1000 characters
+                      </span>
+                    </div>
+                    <Textarea
+                      value={editForm.aboutYourself}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 1000) {
+                          setEditForm({ ...editForm, aboutYourself: e.target.value });
+                        }
+                      }}
+                      placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
+                      rows={6}
+                      maxLength={1000}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span>{profile.email}</span>
+                  </div>
+                  
+                  {isStudent && profile.currentTown && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span>{profile.currentTown}</span>
+                    </div>
+                  )}
+                  
+                  {isStudent && profile.phone && (
+                    <div className="flex items-center gap-3">
+                      <PhoneIcon className="w-4 h-4 text-muted-foreground" />
+                      <span>{profile.phone}</span>
+                    </div>
+                  )}
+                  
+                  {isStudent && profile.class && (
+                    <div className="flex items-center gap-3">
+                      <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                      <span>{profile.class}</span>
+                    </div>
+                  )}
+                  
+                  {school && (
+                    <div className="flex items-center gap-3">
+                      <SchoolIcon className="w-4 h-4 text-muted-foreground" />
+                      <span>{school.name}</span>
+                    </div>
+                  )}
+                  
+                  {isStudent && profile.socialMediaLinks && (
+                    <div className="space-y-2 pt-2">
+                      <h4 className="font-medium text-xs text-muted-foreground uppercase">Social Media</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.socialMediaLinks.instagram && (
+                          <a
+                            href={profile.socialMediaLinks.instagram.startsWith('http') 
+                              ? profile.socialMediaLinks.instagram 
+                              : `https://instagram.com/${profile.socialMediaLinks.instagram}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[#854cf4] hover:underline"
+                          >
+                            <LinkIcon className="w-3 h-3" />
+                            Instagram
+                          </a>
+                        )}
+                        {profile.socialMediaLinks.twitter && (
+                          <a
+                            href={profile.socialMediaLinks.twitter.startsWith('http') 
+                              ? profile.socialMediaLinks.twitter 
+                              : `https://twitter.com/${profile.socialMediaLinks.twitter}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[#854cf4] hover:underline"
+                          >
+                            <LinkIcon className="w-3 h-3" />
+                            Twitter
+                          </a>
+                        )}
+                        {profile.socialMediaLinks.linkedin && (
+                          <a
+                            href={profile.socialMediaLinks.linkedin.startsWith('http') 
+                              ? profile.socialMediaLinks.linkedin 
+                              : `https://linkedin.com/in/${profile.socialMediaLinks.linkedin}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[#854cf4] hover:underline"
+                          >
+                            <LinkIcon className="w-3 h-3" />
+                            LinkedIn
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {isStudent && profile.schoolHistory && profile.schoolHistory.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      <h4 className="font-medium text-xs text-muted-foreground uppercase">School History</h4>
+                      {profile.schoolHistory.map((school: any, index: number) => (
+                        school.schoolName && (
+                          <div key={index} className="flex items-start gap-3 pl-1">
+                            <Briefcase className="w-4 h-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <p className="font-medium">{school.schoolName}</p>
+                              {(school.from || school.to) && (
+                                <p className="text-xs text-muted-foreground">
+                                  {school.from} - {school.to || 'Present'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  )}
+                  
+                  {isStudent && profile.aboutYourself && (
+                    <div className="space-y-2 pt-4 border-t">
+                      <h4 className="font-medium text-xs text-muted-foreground uppercase">About</h4>
+                      <p className="text-sm whitespace-pre-wrap">{profile.aboutYourself}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -511,4 +825,8 @@ function ConnectionCard({ connection, currentUserId }: { connection: any; curren
       </CardContent>
     </Card>
   );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="text-sm font-medium">{children}</label>;
 }
