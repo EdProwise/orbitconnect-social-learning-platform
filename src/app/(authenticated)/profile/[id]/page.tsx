@@ -81,7 +81,7 @@ export default function ProfilePage() {
 
   // Get current user
   const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-  const isOwnProfile = currentUser.userId === parseInt(userId);
+  const isOwnProfile = currentUser.id === parseInt(userId);
 
   useEffect(() => {
     if (userId) {
@@ -130,7 +130,7 @@ export default function ProfilePage() {
       await apiRequest('/api/connections', {
         method: 'POST',
         body: JSON.stringify({
-          requesterId: currentUser.userId,
+          requesterId: currentUser.id,
           receiverId: parseInt(userId),
         }),
       });

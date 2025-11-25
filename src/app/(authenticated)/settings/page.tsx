@@ -42,12 +42,12 @@ export default function SettingsPage() {
       setIsLoading(true);
       const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
       
-      if (!user.userId) {
+      if (!user.id) {
         toast.error('Please log in to access settings');
         return;
       }
 
-      const userData = await apiRequest(`/api/users?id=${user.userId}`, { method: 'GET' });
+      const userData = await apiRequest(`/api/users?id=${user.id}`, { method: 'GET' });
       setCurrentUser(userData);
       setProfileForm({
         name: userData.name || '',
@@ -83,7 +83,7 @@ export default function SettingsPage() {
       setIsSaving(true);
       const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
       
-      await apiRequest(`/api/users?id=${user.userId}`, {
+      await apiRequest(`/api/users?id=${user.id}`, {
         method: 'PUT',
         body: JSON.stringify(profileForm),
       });
@@ -137,7 +137,7 @@ export default function SettingsPage() {
       
       // For demo purposes, we'll use the preview URL (base64)
       // In production, you'd upload to a storage service first
-      await apiRequest(`/api/users?id=${user.userId}`, {
+      await apiRequest(`/api/users?id=${user.id}`, {
         method: 'PUT',
         body: JSON.stringify({ [field]: previewUrl }),
       });
