@@ -12,6 +12,7 @@ import {
   GraduationCap,
   BookOpen,
   Bookmark,
+  UserCircle,
 } from 'lucide-react';
 import { JWTPayload } from '@/lib/auth';
 
@@ -21,6 +22,7 @@ interface LeftSidebarProps {
 
 const navigationItems = [
   { name: 'Home', href: '/feed', icon: Home },
+  { name: 'Inspiration Teacher', href: '/teachers', icon: GraduationCap },
   { name: 'Meet GenZ', href: '/profiles', icon: Users },
   { name: 'Discover School', href: '/schools', icon: School },
   { name: 'Organize', href: '/organize', icon: Calendar },
@@ -28,6 +30,7 @@ const navigationItems = [
   { name: 'Tutors', href: '/tutors', icon: GraduationCap },
   { name: 'Courses', href: '/courses', icon: BookOpen },
   { name: 'Saved', href: '/saved', icon: Bookmark },
+  { name: 'Profile', href: '/settings', icon: UserCircle },
 ];
 
 export function LeftSidebar({ user }: LeftSidebarProps) {

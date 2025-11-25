@@ -3,29 +3,27 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, MapPin, Users, GraduationCap, ExternalLink } from 'lucide-react';
+import { Search, UserPlus, MessageSquare, Users } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
-interface School {
+interface SchoolUser {
   id: number;
   name: string;
-  slug: string;
-  logo: string | null;
-  coverImage: string | null;
-  description: string | null;
-  location: string | null;
-  website: string | null;
-  studentCount: number;
-  teacherCount: number;
-  establishedYear: number | null;
+  email: string;
+  role: string;
+  avatar: string | null;
+  bio: string | null;
+  schoolId: number | null;
 }
 
 export default function SchoolsPage() {
-  const [schools, setSchools] = useState<School[]>([]);
+  const [schools, setSchools] = useState<SchoolUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -36,10 +34,11 @@ export default function SchoolsPage() {
   const fetchSchools = async () => {
     try {
       setIsLoading(true);
-      const data = await apiRequest('/api/schools?limit=50', { method: 'GET' });
+      const data = await apiRequest('/api/users?role=SCHOOL&limit=50', { method: 'GET' });
       setSchools(data);
     } catch (error) {
       console.error('Failed to fetch schools:', error);
+      toast.error('Failed to load schools');
     } finally {
       setIsLoading(false);
     }
@@ -47,13 +46,21 @@ export default function SchoolsPage() {
 
   const filteredSchools = schools.filter(school =>
     school.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    school.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    school.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    school.bio?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold font-poppins">Schools</h1>
+        <div>
+          <h1 className="text-3xl font-bold font-poppins">Discover School</h1>
+          <p className="text-muted-foreground mt-2">
+            Connect with schools and educational institutions
+          </p>
+        </div>
+
+        {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -65,6 +72,7 @@ export default function SchoolsPage() {
         </div>
       </div>
 
+      {/* Schools Grid */}
       {isLoading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -88,71 +96,80 @@ export default function SchoolsPage() {
   );
 }
 
-function SchoolCard({ school }: { school: School }) {
+function SchoolCard({ school }: { school: SchoolUser }) {
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(Math.floor(Math.random() * 1000) + 100);
+
+  const handleFollow = async () => {
+    try {
+      // TODO: Implement actual follow API
+      setIsFollowing(!isFollowing);
+      setFollowerCount(prev => isFollowing ? prev - 1 : prev + 1);
+      toast.success(isFollowing ? 'Unfollowed school' : 'Following school');
+    } catch (error) {
+      console.error('Failed to follow school:', error);
+      toast.error('Failed to follow school');
+    }
+  };
+
   return (
-    <Link href={`/schools/${school.slug}`}>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-        <div className="aspect-video bg-muted rounded-t-xl overflow-hidden relative">
-          {school.coverImage ? (
-            <img src={school.coverImage} alt={school.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#854cf4]/20 to-[#6b3cc9]/20">
-              <GraduationCap className="w-12 h-12 text-[#854cf4]" />
-            </div>
-          )}
-          {school.logo && (
-            <div className="absolute bottom-3 left-3 w-16 h-16 rounded-lg bg-white border-2 border-white shadow-lg overflow-hidden">
-              <img src={school.logo} alt="" className="w-full h-full object-cover" />
-            </div>
-          )}
-        </div>
-        <CardContent className="p-4 space-y-3">
-          <div>
-            <h3 className="font-semibold text-lg">{school.name}</h3>
-            {school.location && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <MapPin className="w-3 h-3" />
-                {school.location}
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardContent className="p-6 space-y-4">
+        <Link href={`/profile/${school.id}`} className="block">
+          <div className="flex flex-col items-center text-center">
+            <Avatar className="w-20 h-20 mb-3">
+              <AvatarImage src={school.avatar || ''} alt={school.name} />
+              <AvatarFallback className="text-xl">{school.name[0]}</AvatarFallback>
+            </Avatar>
+            <h3 className="font-semibold">{school.name}</h3>
+            <Badge variant="secondary" className="mt-1 text-xs">
+              SCHOOL
+            </Badge>
+            {school.bio && (
+              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                {school.bio}
               </p>
             )}
-          </div>
-
-          {school.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {school.description}
-            </p>
-          )}
-
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
+            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
               <Users className="w-3 h-3" />
-              {school.studentCount} students
-            </span>
-            <span className="flex items-center gap-1">
-              <GraduationCap className="w-3 h-3" />
-              {school.teacherCount} teachers
-            </span>
+              <span>{followerCount} followers</span>
+            </div>
           </div>
-
-          {school.establishedYear && (
-            <p className="text-xs text-muted-foreground">
-              Est. {school.establishedYear}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+        </Link>
+        <div className="flex gap-2 pt-2">
+          <Button 
+            size="sm" 
+            className={`flex-1 ${isFollowing ? 'bg-gray-500 hover:bg-gray-600' : 'bg-[#854cf4] hover:bg-[#7743e0]'} text-white`}
+            onClick={handleFollow}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            {isFollowing ? 'Following' : 'Follow'}
+          </Button>
+          <Button size="sm" variant="outline" className="flex-1">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Message
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function SchoolSkeleton() {
   return (
     <Card>
-      <Skeleton className="aspect-video rounded-t-xl" />
-      <CardContent className="p-4 space-y-3">
-        <Skeleton className="h-6 w-3/4" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
+      <CardContent className="p-6 space-y-4">
+        <div className="flex flex-col items-center">
+          <Skeleton className="w-20 h-20 rounded-full mb-3" />
+          <Skeleton className="h-5 w-32 mb-2" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-full mt-2" />
+          <Skeleton className="h-3 w-24 mt-2" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 flex-1" />
+          <Skeleton className="h-9 flex-1" />
+        </div>
       </CardContent>
     </Card>
   );
