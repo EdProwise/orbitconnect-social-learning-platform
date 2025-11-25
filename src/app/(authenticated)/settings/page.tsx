@@ -105,6 +105,13 @@ export default function SettingsPage() {
       toast.success('Profile updated successfully!');
       // Refresh user data
       await fetchUserData();
+      
+      // Update localStorage with new profile data
+      const updatedUser = { ...user, ...profileForm };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Dispatch storage event to notify other components
+      window.dispatchEvent(new Event('storage'));
     } catch (error) {
       console.error('Failed to update profile:', error);
       toast.error('Failed to update profile');
@@ -158,6 +165,13 @@ export default function SettingsPage() {
       
       // Refetch user data to get latest from database
       await fetchUserData();
+      
+      // Update localStorage with new image
+      const updatedUser = { ...user, [field]: previewUrl };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Dispatch storage event to notify other components
+      window.dispatchEvent(new Event('storage'));
       
       setShowImageUpload(null);
       setSelectedFile(null);

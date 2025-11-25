@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,32 @@ interface TopNavProps {
 export function TopNav({ user }: TopNavProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
+  const [userName, setUserName] = useState('');
+
+  const loadUserData = () => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      setUserAvatar(userData.avatar || '');
+      setUserName(userData.name || userData.email || '');
+    }
+  };
+
+  useEffect(() => {
+    loadUserData();
+
+    // Listen for storage events to update when profile changes
+    const handleStorageChange = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -149,15 +175,15 @@ export function TopNav({ user }: TopNavProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={`https://i.pravatar.cc/150?u=${user.email}`} alt={user.email} />
-                  <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+                  <AvatarImage src={userAvatar} alt={userName} />
+                  <AvatarFallback>{getInitials(userName || user.email)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.email}</p>
+                  <p className="text-sm font-medium leading-none">{userName || user.email}</p>
                   <p className="text-xs leading-none text-muted-foreground">{user.role}</p>
                 </div>
               </DropdownMenuLabel>

@@ -30,13 +30,28 @@ export function PostComposer() {
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
 
-  useEffect(() => {
+  const loadUserData = () => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserName(user.name || '');
       setUserAvatar(user.avatar || '');
     }
+  };
+
+  useEffect(() => {
+    loadUserData();
+
+    // Listen for storage events to update when profile changes
+    const handleStorageChange = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handlePostTypeClick = (path: string) => {
