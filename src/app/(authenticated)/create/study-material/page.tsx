@@ -7,36 +7,57 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, X, BookOpen, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, X, BookOpen, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function CreateStudyMaterialPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [fileUrls, setFileUrls] = useState<string[]>(['']);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<{ type: string; url: string; name: string }[]>([]);
 
-  const addFileUrl = () => {
-    setFileUrls([...fileUrls, '']);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    // Filter for images and PDFs
+    const validFiles = selectedFiles.filter(file => 
+      file.type.startsWith('image/') || file.type === 'application/pdf'
+    );
+
+    if (validFiles.length !== selectedFiles.length) {
+      toast.error('Only image and PDF files are allowed');
+    }
+
+    setFiles(prev => [...prev, ...validFiles]);
+
+    // Generate previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => [...prev, {
+          type: file.type,
+          url: reader.result as string,
+          name: file.name
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const updateFileUrl = (index: number, url: string) => {
-    const newUrls = [...fileUrls];
-    newUrls[index] = url;
-    setFileUrls(newUrls);
-  };
-
-  const removeFileUrl = (index: number) => {
-    setFileUrls(fileUrls.filter((_, i) => i !== index));
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter the name of the study material');
+      toast.error('Please enter the name of the study material');
       return;
     }
 
@@ -47,12 +68,21 @@ export default function CreateStudyMaterialPage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to upload study material');
+        toast.error('Please log in to upload study material');
         router.push('/login');
         return;
       }
 
-      const validUrls = fileUrls.filter(url => url.trim());
+      // Convert files to base64 for storage
+      const fileUrls: string[] = [];
+      for (const file of files) {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        fileUrls.push(base64);
+      }
 
       const postData: any = {
         userId: user.id,
@@ -61,8 +91,8 @@ export default function CreateStudyMaterialPage() {
         content: content.trim() || null,
       };
 
-      if (validUrls.length > 0) {
-        postData.fileUrls = validUrls;
+      if (fileUrls.length > 0) {
+        postData.fileUrls = fileUrls;
       }
 
       await apiRequest('/api/posts', {
@@ -70,10 +100,11 @@ export default function CreateStudyMaterialPage() {
         body: JSON.stringify(postData),
       });
 
+      toast.success('Study material uploaded successfully!');
       router.push('/feed');
     } catch (error) {
       console.error('Failed to upload study material:', error);
-      alert('Failed to upload study material. Please try again.');
+      toast.error('Failed to upload study material. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -126,42 +157,65 @@ export default function CreateStudyMaterialPage() {
             </div>
 
             <div className="space-y-3">
-              <Label>File URLs (PDF/Images)</Label>
-              {fileUrls.map((url, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <Input
-                    placeholder="Enter file URL (PDF, image, etc.)..."
-                    value={url}
-                    onChange={(e) => updateFileUrl(index, e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                  {fileUrls.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeFileUrl(index)}
-                      disabled={isSubmitting}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
+              <Label>Upload Files (Images & PDFs)</Label>
+              
+              {previews.length > 0 && (
+                <div className="space-y-2">
+                  {previews.map((preview, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 border border-border rounded-lg group hover:bg-muted/50 transition-colors">
+                      {preview.type === 'application/pdf' ? (
+                        <FileText className="w-8 h-8 text-red-500 flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded overflow-hidden border border-border flex-shrink-0">
+                          <img
+                            src={preview.url}
+                            alt={preview.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{preview.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {preview.type === 'application/pdf' ? 'PDF Document' : 'Image'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeFile(index)}
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addFileUrl}
-                disabled={isSubmitting}
-                className="w-full"
-              >
-                Add Another File
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Add links to PDFs, images, or other study materials
-              </p>
+              )}
+
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                <Input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={isSubmitting}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-sm font-medium">Click to upload images or PDFs</span>
+                  <span className="text-xs text-muted-foreground">
+                    Supports: JPG, PNG, GIF, PDF
+                  </span>
+                </Label>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

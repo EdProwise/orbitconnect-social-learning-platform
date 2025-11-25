@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, Gift, MapPin, Phone, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Gift, MapPin, Phone, X, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function DonateBooksPage() {
   const router = useRouter();
@@ -18,42 +19,58 @@ export default function DonateBooksPage() {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [contact, setContact] = useState('');
-  const [fileUrls, setFileUrls] = useState<string[]>(['']);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
 
-  const addFileUrl = () => {
-    setFileUrls([...fileUrls, '']);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    // Filter for images only
+    const validFiles = selectedFiles.filter(file => 
+      file.type.startsWith('image/')
+    );
+
+    if (validFiles.length !== selectedFiles.length) {
+      toast.error('Only image files are allowed');
+    }
+
+    setFiles(prev => [...prev, ...validFiles]);
+
+    // Generate previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const updateFileUrl = (index: number, url: string) => {
-    const newUrls = [...fileUrls];
-    newUrls[index] = url;
-    setFileUrls(newUrls);
-  };
-
-  const removeFileUrl = (index: number) => {
-    setFileUrls(fileUrls.filter((_, i) => i !== index));
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter a title for your donation');
+      toast.error('Please enter a title for your donation');
       return;
     }
 
     if (!description.trim()) {
-      alert('Please describe what you\'re donating');
+      toast.error('Please describe what you\'re donating');
       return;
     }
 
     if (!location.trim()) {
-      alert('Please provide a location');
+      toast.error('Please provide a location');
       return;
     }
 
     if (!contact.trim()) {
-      alert('Please provide contact information');
+      toast.error('Please provide contact information');
       return;
     }
 
@@ -64,12 +81,21 @@ export default function DonateBooksPage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to create a donation post');
+        toast.error('Please log in to create a donation post');
         router.push('/login');
         return;
       }
 
-      const validUrls = fileUrls.filter(url => url.trim());
+      // Convert files to base64 for storage
+      const fileUrls: string[] = [];
+      for (const file of files) {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        fileUrls.push(base64);
+      }
 
       // Combine all info into content field
       const contentText = `${description}\n\n📍 Location: ${location}\n📞 Contact: ${contact}`;
@@ -81,8 +107,8 @@ export default function DonateBooksPage() {
         content: contentText,
       };
 
-      if (validUrls.length > 0) {
-        postData.fileUrls = validUrls;
+      if (fileUrls.length > 0) {
+        postData.fileUrls = fileUrls;
       }
 
       await apiRequest('/api/posts', {
@@ -90,10 +116,11 @@ export default function DonateBooksPage() {
         body: JSON.stringify(postData),
       });
 
+      toast.success('Donation post created successfully!');
       router.push('/feed');
     } catch (error) {
       console.error('Failed to create donation post:', error);
-      alert('Failed to create donation post. Please try again.');
+      toast.error('Failed to create donation post. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -180,41 +207,55 @@ export default function DonateBooksPage() {
             </div>
 
             <div className="space-y-3">
-              <Label>Photos (Optional)</Label>
-              {fileUrls.map((url, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    placeholder="Enter photo URL of the books..."
-                    value={url}
-                    onChange={(e) => updateFileUrl(index, e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                  {fileUrls.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeFileUrl(index)}
-                      disabled={isSubmitting}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
+              <Label>Upload Photos (Optional)</Label>
+              
+              {previews.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {previews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeFile(index)}
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addFileUrl}
-                disabled={isSubmitting}
-                className="w-full"
-              >
-                Add Another Photo
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Add photos to help people see what you're donating
-              </p>
+              )}
+
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={isSubmitting}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-sm font-medium">Click to upload photos of the books</span>
+                  <span className="text-xs text-muted-foreground">
+                    Supports: JPG, PNG, GIF
+                  </span>
+                </Label>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

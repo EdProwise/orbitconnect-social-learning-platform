@@ -7,35 +7,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, X, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Image as ImageIcon, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function CreatePhotoVideoPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [mediaUrls, setMediaUrls] = useState<string[]>(['']);
-  const [previews, setPreviews] = useState<string[]>(['']);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
 
-  const addMediaUrl = () => {
-    setMediaUrls([...mediaUrls, '']);
-    setPreviews([...previews, '']);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    // Filter for images and videos
+    const validFiles = selectedFiles.filter(file => 
+      file.type.startsWith('image/') || file.type.startsWith('video/')
+    );
+
+    if (validFiles.length !== selectedFiles.length) {
+      toast.error('Only image and video files are allowed');
+    }
+
+    setFiles(prev => [...prev, ...validFiles]);
+
+    // Generate previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const updateMediaUrl = (index: number, url: string) => {
-    const newUrls = [...mediaUrls];
-    newUrls[index] = url;
-    setMediaUrls(newUrls);
-
-    const newPreviews = [...previews];
-    newPreviews[index] = url;
-    setPreviews(newPreviews);
-  };
-
-  const removeMediaUrl = (index: number) => {
-    setMediaUrls(mediaUrls.filter((_, i) => i !== index));
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index));
     setPreviews(previews.filter((_, i) => i !== index));
   };
 
@@ -43,13 +53,12 @@ export default function CreatePhotoVideoPage() {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter a title');
+      toast.error('Please enter a title');
       return;
     }
 
-    const validUrls = mediaUrls.filter(url => url.trim());
-    if (validUrls.length === 0) {
-      alert('Please add at least one photo or video URL');
+    if (files.length === 0) {
+      toast.error('Please upload at least one photo or video');
       return;
     }
 
@@ -60,9 +69,20 @@ export default function CreatePhotoVideoPage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to post');
+        toast.error('Please log in to post');
         router.push('/login');
         return;
+      }
+
+      // Convert files to base64 for storage
+      const mediaUrls: string[] = [];
+      for (const file of files) {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        mediaUrls.push(base64);
       }
 
       const postData: any = {
@@ -70,7 +90,7 @@ export default function CreatePhotoVideoPage() {
         type: 'PHOTO_VIDEO',
         title: title.trim(),
         content: content.trim() || null,
-        mediaUrls: validUrls,
+        mediaUrls,
       };
 
       await apiRequest('/api/posts', {
@@ -78,10 +98,11 @@ export default function CreatePhotoVideoPage() {
         body: JSON.stringify(postData),
       });
 
+      toast.success('Posted successfully!');
       router.push('/feed');
     } catch (error) {
       console.error('Failed to create post:', error);
-      alert('Failed to create post. Please try again.');
+      toast.error('Failed to create post. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -134,57 +155,63 @@ export default function CreatePhotoVideoPage() {
             </div>
 
             <div className="space-y-3">
-              <Label>Media URLs *</Label>
-              {mediaUrls.map((url, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter photo or video URL..."
-                      value={url}
-                      onChange={(e) => updateMediaUrl(index, e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                    {mediaUrls.length > 1 && (
+              <Label>Upload Photos/Videos *</Label>
+              
+              {previews.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {previews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                        {files[index].type.startsWith('video/') ? (
+                          <video
+                            src={preview}
+                            className="w-full h-full object-cover"
+                            controls
+                          />
+                        ) : (
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive"
                         size="icon"
-                        onClick={() => removeMediaUrl(index)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeFile(index)}
                         disabled={isSubmitting}
                       >
                         <X className="w-4 h-4" />
                       </Button>
-                    )}
-                  </div>
-                  {previews[index] && (
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
-                      <img
-                        src={previews[index]}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={() => {
-                          const newPreviews = [...previews];
-                          newPreviews[index] = '';
-                          setPreviews(newPreviews);
-                        }}
-                      />
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addMediaUrl}
-                disabled={isSubmitting}
-                className="w-full"
-              >
-                Add Another Media
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Add photos or videos to share with your network
-              </p>
+              )}
+
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                <Input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={isSubmitting}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-sm font-medium">Click to upload photos or videos</span>
+                  <span className="text-xs text-muted-foreground">
+                    Supports: JPG, PNG, GIF, MP4, MOV, etc.
+                  </span>
+                </Label>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
@@ -198,7 +225,7 @@ export default function CreatePhotoVideoPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !title.trim() || mediaUrls.filter(u => u.trim()).length === 0}
+                disabled={isSubmitting || !title.trim() || files.length === 0}
                 className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
               >
                 {isSubmitting ? (

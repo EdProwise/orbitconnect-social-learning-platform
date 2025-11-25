@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader2, Plus, X, BarChart3, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, X, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -16,8 +16,6 @@ export default function CreatePollPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [options, setOptions] = useState(['', '']);
-  const [mediaUrls, setMediaUrls] = useState<string[]>(['']);
-  const [previews, setPreviews] = useState<string[]>(['']);
 
   const addOption = () => {
     if (options.length < 6) {
@@ -35,26 +33,6 @@ export default function CreatePollPage() {
     if (options.length > 2) {
       setOptions(options.filter((_, i) => i !== index));
     }
-  };
-
-  const addMediaUrl = () => {
-    setMediaUrls([...mediaUrls, '']);
-    setPreviews([...previews, '']);
-  };
-
-  const updateMediaUrl = (index: number, url: string) => {
-    const newUrls = [...mediaUrls];
-    newUrls[index] = url;
-    setMediaUrls(newUrls);
-
-    const newPreviews = [...previews];
-    newPreviews[index] = url;
-    setPreviews(newPreviews);
-  };
-
-  const removeMediaUrl = (index: number) => {
-    setMediaUrls(mediaUrls.filter((_, i) => i !== index));
-    setPreviews(previews.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,18 +61,12 @@ export default function CreatePollPage() {
         return;
       }
 
-      const validUrls = mediaUrls.filter(url => url.trim());
-
       const postData: any = {
         userId: user.id,
         type: 'POLL',
         title: title.trim(),
         pollOptions: validOptions.map(opt => ({ text: opt, votes: 0 })),
       };
-
-      if (validUrls.length > 0) {
-        postData.mediaUrls = validUrls;
-      }
 
       await apiRequest('/api/posts', {
         method: 'POST',
@@ -181,58 +153,6 @@ export default function CreatePollPage() {
                   Add Option
                 </Button>
               )}
-            </div>
-
-            <div className="space-y-3">
-              <Label>Add Images/Videos (Optional)</Label>
-              {mediaUrls.map((url, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter image or video URL..."
-                      value={url}
-                      onChange={(e) => updateMediaUrl(index, e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                    {mediaUrls.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => removeMediaUrl(index)}
-                        disabled={isSubmitting}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {previews[index] && (
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
-                      <img
-                        src={previews[index]}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={() => {
-                          const newPreviews = [...previews];
-                          newPreviews[index] = '';
-                          setPreviews(newPreviews);
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addMediaUrl}
-                disabled={isSubmitting}
-                className="w-full"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Add Media
-              </Button>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
