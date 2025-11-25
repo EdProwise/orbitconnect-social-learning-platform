@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Lock, Bell, Eye, X, Plus, Camera, Upload } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [schools, setSchools] = useState<any[]>([]);
   const [showImageUpload, setShowImageUpload] = useState<'avatar' | 'cover' | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -25,6 +27,7 @@ export default function SettingsPage() {
     name: '',
     email: '',
     bio: '',
+    schoolId: null as number | null,
     currentTown: '',
     phone: '',
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
@@ -35,7 +38,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchUserData();
+    fetchSchools();
   }, []);
+
+  const fetchSchools = async () => {
+    try {
+      const schoolsData = await apiRequest('/api/schools?limit=100', { method: 'GET' });
+      setSchools(schoolsData);
+    } catch (error) {
+      console.error('Failed to fetch schools:', error);
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -53,6 +66,7 @@ export default function SettingsPage() {
         name: userData.name || '',
         email: userData.email || '',
         bio: userData.bio || '',
+        schoolId: userData.schoolId || null,
         currentTown: userData.currentTown || '',
         phone: userData.phone || '',
         socialMediaLinks: userData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
@@ -318,6 +332,29 @@ export default function SettingsPage() {
                     <h3 className="text-lg font-semibold mb-4">Student Information</h3>
                     
                     <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="assignedSchool">Assigned School</Label>
+                        <Select
+                          value={profileForm.schoolId?.toString() || 'none'}
+                          onValueChange={(value) => setProfileForm({ ...profileForm, schoolId: value === 'none' ? null : parseInt(value) })}
+                        >
+                          <SelectTrigger id="assignedSchool">
+                            <SelectValue placeholder="Select a school" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No school assigned</SelectItem>
+                            {schools.map((s) => (
+                              <SelectItem key={s.id} value={s.id.toString()}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          This is your current assigned school shown in your profile
+                        </p>
+                      </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="currentTown">Current Town</Label>
                         <Input

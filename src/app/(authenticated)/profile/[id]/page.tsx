@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PostCard } from '@/components/feed/post-card';
 import {
   UserPlus,
@@ -71,6 +72,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [school, setSchool] = useState<any>(null);
+  const [schools, setSchools] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -80,6 +82,7 @@ export default function ProfilePage() {
   const [editForm, setEditForm] = useState({
     name: '',
     bio: '',
+    schoolId: null as number | null,
     currentTown: '',
     phone: '',
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
@@ -88,6 +91,7 @@ export default function ProfilePage() {
     aboutYourself: '',
   });
   const [aboutEditForm, setAboutEditForm] = useState({
+    schoolId: null as number | null,
     currentTown: '',
     phone: '',
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
@@ -107,8 +111,18 @@ export default function ProfilePage() {
   useEffect(() => {
     if (userId) {
       fetchProfile();
+      fetchSchools();
     }
   }, [userId]);
+
+  const fetchSchools = async () => {
+    try {
+      const schoolsData = await apiRequest('/api/schools?limit=100', { method: 'GET' });
+      setSchools(schoolsData);
+    } catch (error) {
+      console.error('Failed to fetch schools:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -123,6 +137,7 @@ export default function ProfilePage() {
       setEditForm({
         name: profileData.name,
         bio: profileData.bio || '',
+        schoolId: profileData.schoolId || null,
         currentTown: profileData.currentTown || '',
         phone: profileData.phone || '',
         socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
@@ -131,6 +146,7 @@ export default function ProfilePage() {
         aboutYourself: profileData.aboutYourself || '',
       });
       setAboutEditForm({
+        schoolId: profileData.schoolId || null,
         currentTown: profileData.currentTown || '',
         phone: profileData.phone || '',
         socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
@@ -190,6 +206,9 @@ export default function ProfilePage() {
       setProfile(updated);
       setIsEditMode(false);
       toast.success('Profile updated successfully!');
+      
+      // Refetch to update school info
+      await fetchProfile();
     } catch (error) {
       console.error('Failed to update profile:', error);
       toast.error('Failed to update profile');
@@ -213,6 +232,9 @@ export default function ProfilePage() {
       setProfile(updated);
       setIsAboutEditMode(false);
       toast.success('About section updated successfully!');
+      
+      // Refetch to update school info
+      await fetchProfile();
     } catch (error) {
       console.error('Failed to update about section:', error);
       toast.error('Failed to update about section');
@@ -399,6 +421,7 @@ export default function ProfilePage() {
                               setEditForm({
                                 name: profile.name,
                                 bio: profile.bio || '',
+                                schoolId: profile.schoolId || null,
                                 currentTown: profile.currentTown || '',
                                 phone: profile.phone || '',
                                 socialMediaLinks: profile.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
@@ -465,24 +488,51 @@ export default function ProfilePage() {
 
           {/* Bio */}
           {isEditMode ? (
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Bio</label>
-                <span className="text-xs text-muted-foreground">
-                  {editForm.bio.length}/250 characters
-                </span>
+            <div className="space-y-4 mb-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Bio</label>
+                  <span className="text-xs text-muted-foreground">
+                    {editForm.bio.length}/250 characters
+                  </span>
+                </div>
+                <Textarea
+                  value={editForm.bio}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 250) {
+                      setEditForm({ ...editForm, bio: e.target.value });
+                    }
+                  }}
+                  placeholder="Write a short bio..."
+                  rows={2}
+                  maxLength={250}
+                />
               </div>
-              <Textarea
-                value={editForm.bio}
-                onChange={(e) => {
-                  if (e.target.value.length <= 250) {
-                    setEditForm({ ...editForm, bio: e.target.value });
-                  }
-                }}
-                placeholder="Write a short bio..."
-                rows={2}
-                maxLength={250}
-              />
+
+              {isStudent && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assigned School</label>
+                  <Select
+                    value={editForm.schoolId?.toString() || 'none'}
+                    onValueChange={(value) => setEditForm({ ...editForm, schoolId: value === 'none' ? null : parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a school" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No school assigned</SelectItem>
+                      {schools.map((s) => (
+                        <SelectItem key={s.id} value={s.id.toString()}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This is your current assigned school shown in your profile
+                  </p>
+                </div>
+              )}
             </div>
           ) : profile.bio ? (
             <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>
@@ -612,6 +662,7 @@ export default function ProfilePage() {
                         onClick={() => {
                           setIsAboutEditMode(false);
                           setAboutEditForm({
+                            schoolId: profile.schoolId || null,
                             currentTown: profile.currentTown || '',
                             phone: profile.phone || '',
                             socialMediaLinks: profile.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
@@ -799,6 +850,29 @@ export default function ProfilePage() {
                   <div className="space-y-6">
                     {isAboutEditMode ? (
                       <>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Assigned School</Label>
+                          <Select
+                            value={aboutEditForm.schoolId?.toString() || 'none'}
+                            onValueChange={(value) => setAboutEditForm({ ...aboutEditForm, schoolId: value === 'none' ? null : parseInt(value) })}
+                          >
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select a school" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No school assigned</SelectItem>
+                              {schools.map((s) => (
+                                <SelectItem key={s.id} value={s.id.toString()}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            This is your current assigned school shown in your profile
+                          </p>
+                        </div>
+
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">Current Class</Label>
                           <Input
