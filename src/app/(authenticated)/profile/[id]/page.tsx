@@ -520,7 +520,7 @@ export default function ProfilePage() {
         <TabsContent value="overview" className="space-y-4">
           {/* LinkedIn-Style About Card with Sidebar */}
           <Card className="overflow-hidden">
-            <div className="flex flex-col lg:flex-row min-h-[600px]">
+            <div className="flex flex-col lg:flex-row">
               {/* Left Sidebar Navigation */}
               <div className="lg:w-64 border-b lg:border-b-0 lg:border-r border-border bg-muted/20 p-6">
                 <h2 className="text-xl font-semibold font-poppins mb-6">About</h2>
