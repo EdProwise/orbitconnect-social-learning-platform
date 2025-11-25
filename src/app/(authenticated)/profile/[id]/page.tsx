@@ -32,6 +32,13 @@ import {
   Instagram,
   Twitter,
   Linkedin,
+  Home,
+  Heart,
+  User,
+  Info,
+  Sparkles,
+  Globe,
+  MoreHorizontal,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
@@ -66,6 +73,7 @@ export default function ProfilePage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [aboutActiveSection, setAboutActiveSection] = useState('overview');
   const [isEditMode, setIsEditMode] = useState(false);
   const [isAboutEditMode, setIsAboutEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -510,72 +518,390 @@ export default function ProfilePage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {/* Redesigned About Card */}
-          <Card className="shadow-sm border-border/50">
-            <CardContent className="p-8">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold font-poppins">About</h3>
-                {isOwnProfile && !isAboutEditMode && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsAboutEditMode(true)}
-                    className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10"
+          {/* LinkedIn-Style About Card with Sidebar */}
+          <Card className="overflow-hidden">
+            <div className="flex flex-col lg:flex-row min-h-[600px]">
+              {/* Left Sidebar Navigation */}
+              <div className="lg:w-64 border-b lg:border-b-0 lg:border-r border-border bg-muted/20 p-6">
+                <h2 className="text-xl font-semibold font-poppins mb-6">About</h2>
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => setAboutActiveSection('overview')}
+                    className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      aboutActiveSection === 'overview'
+                        ? 'bg-primary/10 text-[#854cf4]'
+                        : 'text-muted-foreground hover:bg-muted/50'
+                    }`}
                   >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                )}
-                {isAboutEditMode && (
-                  <div className="flex gap-2">
+                    Overview
+                  </button>
+                  {isStudent && (
+                    <>
+                      <button
+                        onClick={() => setAboutActiveSection('education')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'education'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Work and education
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('location')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'location'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Places lived
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('contact')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'contact'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Contact and basic info
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('details')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'details'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Details about you
+                      </button>
+                    </>
+                  )}
+                </nav>
+              </div>
+
+              {/* Main Content Area */}
+              <div className="flex-1 p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-lg font-semibold font-poppins capitalize">
+                    {aboutActiveSection === 'overview' && 'Overview'}
+                    {aboutActiveSection === 'education' && 'Work and education'}
+                    {aboutActiveSection === 'location' && 'Places lived'}
+                    {aboutActiveSection === 'contact' && 'Contact and basic info'}
+                    {aboutActiveSection === 'details' && 'Details about you'}
+                  </h3>
+                  {isOwnProfile && !isAboutEditMode && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {
-                        setIsAboutEditMode(false);
-                        setAboutEditForm({
-                          currentTown: profile.currentTown || '',
-                          phone: profile.phone || '',
-                          socialMediaLinks: profile.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
-                          class: profile.class || '',
-                          schoolHistory: profile.schoolHistory || [{ schoolName: '', from: '', to: '' }],
-                          aboutYourself: profile.aboutYourself || '',
-                        });
-                      }}
+                      onClick={() => setIsAboutEditMode(true)}
+                      className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10"
                     >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Edit
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveAbout}
-                      disabled={isSaving}
-                      className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Save
-                    </Button>
+                  )}
+                  {isAboutEditMode && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setIsAboutEditMode(false);
+                          setAboutEditForm({
+                            currentTown: profile.currentTown || '',
+                            phone: profile.phone || '',
+                            socialMediaLinks: profile.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
+                            class: profile.class || '',
+                            schoolHistory: profile.schoolHistory || [{ schoolName: '', from: '', to: '' }],
+                            aboutYourself: profile.aboutYourself || '',
+                          });
+                        }}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveAbout}
+                        disabled={isSaving}
+                        className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        Save
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Overview Section */}
+                {aboutActiveSection === 'overview' && (
+                  <div className="space-y-4">
+                    {isStudent && school && (
+                      <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <Briefcase className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            {profile.role === 'STUDENT' ? 'Student' : profile.role} at <span className="font-semibold">{school.name}</span>
+                          </p>
+                          {profile.class && (
+                            <p className="text-sm text-muted-foreground mt-0.5">Current: {profile.class}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {isStudent && profile.schoolHistory && profile.schoolHistory.some((s: any) => s.schoolName) && (
+                      <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <GraduationCap className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            Studied at <span className="font-semibold">{profile.schoolHistory[0].schoolName}</span>
+                          </p>
+                          {(profile.schoolHistory[0].from || profile.schoolHistory[0].to) && (
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              Attended from {profile.schoolHistory[0].from || '—'} to {profile.schoolHistory[0].to || 'Present'}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {isStudent && profile.currentTown && (
+                      <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <Home className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            Lives in <span className="font-semibold">{profile.currentTown}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {isStudent && profile.phone && (
+                      <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <PhoneIcon className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">{profile.phone}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">Mobile</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isStudent && (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground">No information available</p>
+                      </div>
+                    )}
+
+                    {isOwnProfile && isStudent && !school && !profile.currentTown && !profile.phone && (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">Add information to help others know you better</p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsAboutEditMode(true)}
+                          className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                        >
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Add Information
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {isAboutEditMode && isStudent ? (
-                <div className="space-y-6">
-                  {/* Contact Information Section */}
+                {/* Work and Education Section */}
+                {aboutActiveSection === 'education' && isStudent && (
+                  <div className="space-y-6">
+                    {isAboutEditMode ? (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Current Class</Label>
+                          <Input
+                            value={aboutEditForm.class}
+                            onChange={(e) => setAboutEditForm({ ...aboutEditForm, class: e.target.value })}
+                            placeholder="e.g., Class 10 / Year 2"
+                            className="h-11"
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">School History</Label>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={addSchoolHistoryAbout}
+                              className="h-8 text-xs"
+                            >
+                              + Add School
+                            </Button>
+                          </div>
+                          <div className="space-y-3">
+                            {aboutEditForm.schoolHistory.map((school, index) => (
+                              <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-muted-foreground">School {index + 1}</span>
+                                  {aboutEditForm.schoolHistory.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => removeSchoolHistoryAbout(index)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <Input
+                                  value={school.schoolName}
+                                  onChange={(e) => updateSchoolHistoryAbout(index, 'schoolName', e.target.value)}
+                                  placeholder="School Name"
+                                  className="h-11"
+                                />
+                                <div className="grid grid-cols-2 gap-3">
+                                  <Input
+                                    value={school.from}
+                                    onChange={(e) => updateSchoolHistoryAbout(index, 'from', e.target.value)}
+                                    placeholder="From (e.g., 2020)"
+                                    className="h-11"
+                                  />
+                                  <Input
+                                    value={school.to}
+                                    onChange={(e) => updateSchoolHistoryAbout(index, 'to', e.target.value)}
+                                    placeholder="To (e.g., 2024)"
+                                    className="h-11"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        {school && (
+                          <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <SchoolIcon className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">{school.name}</p>
+                              {profile.class && (
+                                <p className="text-sm text-muted-foreground mt-0.5">{profile.class}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {profile.schoolHistory && profile.schoolHistory.map((school: any, index: number) => (
+                          school.schoolName && (
+                            <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                                <GraduationCap className="w-5 h-5 text-[#854cf4]" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold">{school.schoolName}</p>
+                                {(school.from || school.to) && (
+                                  <p className="text-sm text-muted-foreground mt-0.5">
+                                    {school.from} - {school.to || 'Present'}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                  <Globe className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                                <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        ))}
+
+                        {!school && (!profile.schoolHistory || !profile.schoolHistory.some((s: any) => s.schoolName)) && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">No education information added yet</p>
+                            {isOwnProfile && (
+                              <Button
+                                size="sm"
+                                onClick={() => setIsAboutEditMode(true)}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Add Education
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Places Lived Section */}
+                {aboutActiveSection === 'location' && isStudent && (
                   <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Contact Information</h4>
-                    
-                    <div className="grid md:grid-cols-2 gap-4">
+                    {isAboutEditMode ? (
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-[#854cf4]" />
-                          Location
-                        </Label>
+                        <Label className="text-sm font-medium">Current Town/City</Label>
                         <Input
                           value={aboutEditForm.currentTown}
                           onChange={(e) => setAboutEditForm({ ...aboutEditForm, currentTown: e.target.value })}
@@ -583,357 +909,250 @@ export default function ProfilePage() {
                           className="h-11"
                         />
                       </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <PhoneIcon className="w-4 h-4 text-[#854cf4]" />
-                          Phone Number
-                        </Label>
-                        <Input
-                          value={aboutEditForm.phone}
-                          onChange={(e) => setAboutEditForm({ ...aboutEditForm, phone: e.target.value })}
-                          placeholder="e.g., +91 98765 43210"
-                          className="h-11"
-                        />
+                    ) : profile.currentTown ? (
+                      <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <Home className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Lives in <span className="font-semibold">{profile.currentTown}</span></p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">No location information added yet</p>
+                        {isOwnProfile && (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Location
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
+                )}
 
-                  <div className="border-t border-border/50" />
-
-                  {/* Education Section */}
+                {/* Contact and Basic Info Section */}
+                {aboutActiveSection === 'contact' && isStudent && (
                   <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Education</h4>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4 text-[#854cf4]" />
-                        Current Class
-                      </Label>
-                      <Input
-                        value={aboutEditForm.class}
-                        onChange={(e) => setAboutEditForm({ ...aboutEditForm, class: e.target.value })}
-                        placeholder="e.g., Class 10 / Year 2"
-                        className="h-11"
-                      />
-                    </div>
+                    {isAboutEditMode ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Phone Number</Label>
+                          <Input
+                            value={aboutEditForm.phone}
+                            onChange={(e) => setAboutEditForm({ ...aboutEditForm, phone: e.target.value })}
+                            placeholder="e.g., +91 98765 43210"
+                            className="h-11"
+                          />
+                        </div>
 
-                    <div className="space-y-3 pt-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 text-[#854cf4]" />
-                          School History
-                        </Label>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={addSchoolHistoryAbout}
-                          className="h-8 text-xs"
-                        >
-                          + Add School
-                        </Button>
-                      </div>
-                      <div className="space-y-3">
-                        {aboutEditForm.schoolHistory.map((school, index) => (
-                          <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-muted-foreground">School {index + 1}</span>
-                              {aboutEditForm.schoolHistory.length > 1 && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => removeSchoolHistoryAbout(index)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Social Links</Label>
+                          
+                          <div className="space-y-2">
                             <Input
-                              value={school.schoolName}
-                              onChange={(e) => updateSchoolHistoryAbout(index, 'schoolName', e.target.value)}
-                              placeholder="School Name"
+                              value={aboutEditForm.socialMediaLinks.instagram || ''}
+                              onChange={(e) => setAboutEditForm({
+                                ...aboutEditForm,
+                                socialMediaLinks: { ...aboutEditForm.socialMediaLinks, instagram: e.target.value }
+                              })}
+                              placeholder="Instagram username or URL"
                               className="h-11"
                             />
-                            <div className="grid grid-cols-2 gap-3">
-                              <Input
-                                value={school.from}
-                                onChange={(e) => updateSchoolHistoryAbout(index, 'from', e.target.value)}
-                                placeholder="From (e.g., 2020)"
-                                className="h-11"
-                              />
-                              <Input
-                                value={school.to}
-                                onChange={(e) => updateSchoolHistoryAbout(index, 'to', e.target.value)}
-                                placeholder="To (e.g., 2024)"
-                                className="h-11"
-                              />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Input
+                              value={aboutEditForm.socialMediaLinks.twitter || ''}
+                              onChange={(e) => setAboutEditForm({
+                                ...aboutEditForm,
+                                socialMediaLinks: { ...aboutEditForm.socialMediaLinks, twitter: e.target.value }
+                              })}
+                              placeholder="Twitter username or URL"
+                              className="h-11"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Input
+                              value={aboutEditForm.socialMediaLinks.linkedin || ''}
+                              onChange={(e) => setAboutEditForm({
+                                ...aboutEditForm,
+                                socialMediaLinks: { ...aboutEditForm.socialMediaLinks, linkedin: e.target.value }
+                              })}
+                              placeholder="LinkedIn profile URL"
+                              className="h-11"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {profile.phone && (
+                          <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <PhoneIcon className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">{profile.phone}</p>
+                              <p className="text-sm text-muted-foreground mt-0.5">Mobile</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                        )}
+
+                        <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                            <Mail className="w-5 h-5 text-[#854cf4]" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{profile.email}</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Email</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                              <Globe className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {profile.socialMediaLinks && (profile.socialMediaLinks.instagram || profile.socialMediaLinks.twitter || profile.socialMediaLinks.linkedin) && (
+                          <div className="pt-4 border-t border-border">
+                            <h4 className="text-sm font-medium mb-3">Social Links</h4>
+                            <div className="space-y-2">
+                              {profile.socialMediaLinks.instagram && (
+                                <a
+                                  href={profile.socialMediaLinks.instagram.startsWith('http') 
+                                    ? profile.socialMediaLinks.instagram 
+                                    : `https://instagram.com/${profile.socialMediaLinks.instagram}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                  <Instagram className="w-5 h-5 text-[#854cf4]" />
+                                  <span className="text-sm font-medium">Instagram</span>
+                                </a>
+                              )}
+                              {profile.socialMediaLinks.twitter && (
+                                <a
+                                  href={profile.socialMediaLinks.twitter.startsWith('http') 
+                                    ? profile.socialMediaLinks.twitter 
+                                    : `https://twitter.com/${profile.socialMediaLinks.twitter}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                  <Twitter className="w-5 h-5 text-[#854cf4]" />
+                                  <span className="text-sm font-medium">Twitter</span>
+                                </a>
+                              )}
+                              {profile.socialMediaLinks.linkedin && (
+                                <a
+                                  href={profile.socialMediaLinks.linkedin.startsWith('http') 
+                                    ? profile.socialMediaLinks.linkedin 
+                                    : `https://linkedin.com/in/${profile.socialMediaLinks.linkedin}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                  <Linkedin className="w-5 h-5 text-[#854cf4]" />
+                                  <span className="text-sm font-medium">LinkedIn</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {!profile.phone && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">No contact information added yet</p>
+                            {isOwnProfile && (
+                              <Button
+                                size="sm"
+                                onClick={() => setIsAboutEditMode(true)}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Add Contact Info
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
+                )}
 
-                  <div className="border-t border-border/50" />
-
-                  {/* Social Media Section */}
+                {/* Details About You Section */}
+                {aboutActiveSection === 'details' && isStudent && (
                   <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Social Links</h4>
-                    
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Instagram className="w-4 h-4 text-[#854cf4]" />
-                          Instagram
-                        </Label>
-                        <Input
-                          value={aboutEditForm.socialMediaLinks.instagram || ''}
-                          onChange={(e) => setAboutEditForm({
-                            ...aboutEditForm,
-                            socialMediaLinks: { ...aboutEditForm.socialMediaLinks, instagram: e.target.value }
-                          })}
-                          placeholder="username or full URL"
-                          className="h-11"
+                    {isAboutEditMode ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">About Yourself</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {aboutEditForm.aboutYourself.length}/1000
+                          </span>
+                        </div>
+                        <Textarea
+                          value={aboutEditForm.aboutYourself}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 1000) {
+                              setAboutEditForm({ ...aboutEditForm, aboutYourself: e.target.value });
+                            }
+                          }}
+                          placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
+                          rows={8}
+                          maxLength={1000}
+                          className="resize-none"
                         />
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Twitter className="w-4 h-4 text-[#854cf4]" />
-                          Twitter / X
-                        </Label>
-                        <Input
-                          value={aboutEditForm.socialMediaLinks.twitter || ''}
-                          onChange={(e) => setAboutEditForm({
-                            ...aboutEditForm,
-                            socialMediaLinks: { ...aboutEditForm.socialMediaLinks, twitter: e.target.value }
-                          })}
-                          placeholder="username or full URL"
-                          className="h-11"
-                        />
+                    ) : profile.aboutYourself ? (
+                      <div className="py-2">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.aboutYourself}</p>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Linkedin className="w-4 h-4 text-[#854cf4]" />
-                          LinkedIn
-                        </Label>
-                        <Input
-                          value={aboutEditForm.socialMediaLinks.linkedin || ''}
-                          onChange={(e) => setAboutEditForm({
-                            ...aboutEditForm,
-                            socialMediaLinks: { ...aboutEditForm.socialMediaLinks, linkedin: e.target.value }
-                          })}
-                          placeholder="profile URL"
-                          className="h-11"
-                        />
+                    ) : (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">Tell others about yourself</p>
+                        {isOwnProfile && (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Details
+                          </Button>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
-
-                  <div className="border-t border-border/50" />
-
-                  {/* About Section */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">About Yourself</Label>
-                      <span className="text-xs text-muted-foreground">
-                        {aboutEditForm.aboutYourself.length}/1000
-                      </span>
-                    </div>
-                    <Textarea
-                      value={aboutEditForm.aboutYourself}
-                      onChange={(e) => {
-                        if (e.target.value.length <= 1000) {
-                          setAboutEditForm({ ...aboutEditForm, aboutYourself: e.target.value });
-                        }
-                      }}
-                      placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
-                      rows={6}
-                      maxLength={1000}
-                      className="resize-none"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Contact Information */}
-                  {(profile.email || (isStudent && (profile.currentTown || profile.phone))) && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Contact Information</h4>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                          <Mail className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs text-muted-foreground mb-0.5">Email</p>
-                            <p className="text-sm font-medium truncate">{profile.email}</p>
-                          </div>
-                        </div>
-                        
-                        {isStudent && profile.currentTown && (
-                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                            <MapPin className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-xs text-muted-foreground mb-0.5">Location</p>
-                              <p className="text-sm font-medium truncate">{profile.currentTown}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {isStudent && profile.phone && (
-                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                            <PhoneIcon className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-xs text-muted-foreground mb-0.5">Phone</p>
-                              <p className="text-sm font-medium">{profile.phone}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {(profile.email || (isStudent && (profile.currentTown || profile.phone))) && (isStudent && (profile.class || school)) && (
-                    <div className="border-t border-border/50" />
-                  )}
-
-                  {/* Education */}
-                  {isStudent && (profile.class || school) && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Education</h4>
-                      <div className="space-y-2">
-                        {profile.class && (
-                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                            <GraduationCap className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">Current Class</p>
-                              <p className="text-sm font-medium">{profile.class}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {school && (
-                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                            <SchoolIcon className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">School / Institution</p>
-                              <p className="text-sm font-medium">{school.name}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {isStudent && profile.schoolHistory && profile.schoolHistory.length > 0 && profile.schoolHistory.some((s: any) => s.schoolName) && (
-                    <>
-                      <div className="border-t border-border/50" />
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">School History</h4>
-                        <div className="space-y-2">
-                          {profile.schoolHistory.map((school: any, index: number) => (
-                            school.schoolName && (
-                              <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                                <Briefcase className="w-5 h-5 text-[#854cf4] flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{school.schoolName}</p>
-                                  {(school.from || school.to) && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {school.from} - {school.to || 'Present'}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {isStudent && profile.socialMediaLinks && (profile.socialMediaLinks.instagram || profile.socialMediaLinks.twitter || profile.socialMediaLinks.linkedin) && (
-                    <>
-                      <div className="border-t border-border/50" />
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Social Links</h4>
-                        <div className="flex flex-wrap gap-3">
-                          {profile.socialMediaLinks.instagram && (
-                            <a
-                              href={profile.socialMediaLinks.instagram.startsWith('http') 
-                                ? profile.socialMediaLinks.instagram 
-                                : `https://instagram.com/${profile.socialMediaLinks.instagram}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/50 hover:border-[#854cf4] hover:bg-[#854cf4]/5 transition-all"
-                            >
-                              <Instagram className="w-4 h-4 text-[#854cf4]" />
-                              <span className="text-sm font-medium">Instagram</span>
-                            </a>
-                          )}
-                          {profile.socialMediaLinks.twitter && (
-                            <a
-                              href={profile.socialMediaLinks.twitter.startsWith('http') 
-                                ? profile.socialMediaLinks.twitter 
-                                : `https://twitter.com/${profile.socialMediaLinks.twitter}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/50 hover:border-[#854cf4] hover:bg-[#854cf4]/5 transition-all"
-                            >
-                              <Twitter className="w-4 h-4 text-[#854cf4]" />
-                              <span className="text-sm font-medium">Twitter</span>
-                            </a>
-                          )}
-                          {profile.socialMediaLinks.linkedin && (
-                            <a
-                              href={profile.socialMediaLinks.linkedin.startsWith('http') 
-                                ? profile.socialMediaLinks.linkedin 
-                                : `https://linkedin.com/in/${profile.socialMediaLinks.linkedin}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/50 hover:border-[#854cf4] hover:bg-[#854cf4]/5 transition-all"
-                            >
-                              <Linkedin className="w-4 h-4 text-[#854cf4]" />
-                              <span className="text-sm font-medium">LinkedIn</span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {isStudent && profile.aboutYourself && (
-                    <>
-                      <div className="border-t border-border/50" />
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">About</h4>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{profile.aboutYourself}</p>
-                      </div>
-                    </>
-                  )}
-
-                  {!isStudent && (
-                    <p className="text-sm text-muted-foreground italic">No additional information available</p>
-                  )}
-
-                  {isOwnProfile && isStudent && !profile.currentTown && !profile.phone && !profile.class && !profile.aboutYourself && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground mb-4">Complete your profile to help others know you better</p>
-                      <Button
-                        size="sm"
-                        onClick={() => setIsAboutEditMode(true)}
-                        className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                      >
-                        <Edit2 className="w-4 h-4 mr-2" />
-                        Add Information
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* Recent Posts */}
