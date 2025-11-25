@@ -137,12 +137,14 @@ export default function SettingsPage() {
       
       // For demo purposes, we'll use the preview URL (base64)
       // In production, you'd upload to a storage service first
-      const updated = await apiRequest(`/api/users?id=${user.userId}`, {
+      await apiRequest(`/api/users?id=${user.userId}`, {
         method: 'PUT',
         body: JSON.stringify({ [field]: previewUrl }),
       });
       
-      setCurrentUser(updated);
+      // Refetch user data to get latest from database
+      await fetchUserData();
+      
       setShowImageUpload(null);
       setSelectedFile(null);
       setPreviewUrl('');

@@ -206,12 +206,14 @@ export default function ProfilePage() {
       
       // For demo purposes, we'll use the preview URL (base64)
       // In production, you'd upload to a storage service first
-      const updated = await apiRequest(`/api/users?id=${userId}`, {
+      await apiRequest(`/api/users?id=${userId}`, {
         method: 'PUT',
         body: JSON.stringify({ [field]: previewUrl }),
       });
       
-      setProfile(updated);
+      // Refetch profile data to get latest from database
+      await fetchProfile();
+      
       setShowImageUpload(null);
       setSelectedFile(null);
       setPreviewUrl('');
