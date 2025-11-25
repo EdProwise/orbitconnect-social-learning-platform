@@ -29,7 +29,8 @@ import {
   Gift,
   Edit2,
   Trash2,
-  Zap
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/api-client';
@@ -84,6 +85,14 @@ const postTypeConfig: Record<string, { action: string; icon: any; color: string 
   DONATE_BOOKS: { action: 'is donating books', icon: Gift, color: 'text-red-600' },
 };
 
+// Helper function to extract text from HTML
+const extractTextFromHtml = (html: string, maxLength: number = 200): string => {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const text = div.textContent || div.innerText || '';
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
+
 export function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -105,6 +114,7 @@ export function PostCard({ post }: PostCardProps) {
   const [knowledgePoints, setKnowledgePoints] = useState(0);
   const [userKnowledgePoints, setUserKnowledgePoints] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
+  const [showFullArticle, setShowFullArticle] = useState(false);
 
   // Get current user
   const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -333,6 +343,346 @@ export function PostCard({ post }: PostCardProps) {
   const typeConfig = postTypeConfig[post.type] || postTypeConfig.ARTICLE;
   const TypeIcon = typeConfig.icon;
 
+  // Blog format for articles
+  if (post.type === 'ARTICLE') {
+    return (
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+        {/* Cover Image */}
+        {post.mediaUrls && post.mediaUrls.length > 0 && (
+          <div className="relative w-full h-80 overflow-hidden">
+            <img 
+              src={post.mediaUrls[0]} 
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute top-4 left-4">
+              <Badge className="bg-[#854cf4] text-white">Article</Badge>
+            </div>
+          </div>
+        )}
+
+        <CardContent className="p-8">
+          {/* Author Info */}
+          <div className="flex items-center gap-3 mb-6">
+            <Link href={`/profile/${post.userId}`}>
+              <Avatar className="w-12 h-12 cursor-pointer hover:opacity-80 transition-opacity">
+                <AvatarImage src={author?.avatar || ''} alt={author?.name || 'User'} />
+                <AvatarFallback>{author?.name?.[0] || 'U'}</AvatarFallback>
+              </Avatar>
+            </Link>
+            <div className="flex-1">
+              <Link href={`/profile/${post.userId}`} className="hover:underline">
+                <h4 className="font-semibold text-base">{author?.name || 'Loading...'}</h4>
+              </Link>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="secondary" className="text-xs">{author?.role || ''}</Badge>
+                <span>•</span>
+                <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
+                {knowledgePoints > 0 && (
+                  <>
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-yellow-500" />
+                      <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                        {knowledgePoints}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            {isAuthor && (
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={() => setIsEditMode(true)}>
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleDeletePost}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Article Title & Content */}
+          {isEditMode ? (
+            <div className="space-y-4 mb-6">
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Title"
+                disabled={isUpdating}
+                className="text-2xl font-bold"
+              />
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Content"
+                rows={8}
+                disabled={isUpdating}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditMode(false);
+                    setEditTitle(post.title);
+                    setEditContent(post.content || '');
+                  }}
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleEditPost}
+                  disabled={isUpdating}
+                  className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                >
+                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-3xl font-bold font-poppins mb-4 leading-tight">
+                {post.title}
+              </h2>
+              
+              {post.content && (
+                <>
+                  {showFullArticle ? (
+                    <div 
+                      className="prose prose-lg max-w-none mb-6"
+                      dangerouslySetInnerHTML={{ __html: post.content }}
+                    />
+                  ) : (
+                    <>
+                      <p className="text-base text-muted-foreground mb-6 leading-relaxed">
+                        {extractTextFromHtml(post.content, 300)}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10 p-0 h-auto font-semibold"
+                        onClick={() => setShowFullArticle(true)}
+                      >
+                        Read full article
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </>
+                  )}
+                  {showFullArticle && (
+                    <Button
+                      variant="ghost"
+                      className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10 p-0 h-auto font-semibold mt-4"
+                      onClick={() => setShowFullArticle(false)}
+                    >
+                      Show less
+                    </Button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* Stats */}
+          <div className="flex items-center gap-6 py-4 my-4 border-y border-border text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <ThumbsUp className="w-4 h-4" />
+              <span>{reactions.length} reactions</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4" />
+              <span>{comments.length} comments</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              <span>{post.viewCount} reads</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`w-full ${userReaction === 'LIKE' ? 'text-blue-500' : ''}`}
+                onClick={() => setShowReactionPicker(!showReactionPicker)}
+              >
+                <ThumbsUp className="w-4 h-4 mr-2" />
+                <span className="text-xs">
+                  {userReaction ? reactionTypes.find(r => r.type === userReaction)?.label : 'Like'}
+                </span>
+              </Button>
+              
+              {showReactionPicker && (
+                <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-lg shadow-lg p-2 flex gap-2 z-10">
+                  {reactionTypes.map((reaction) => {
+                    const Icon = reaction.icon;
+                    return (
+                      <Button
+                        key={reaction.type}
+                        variant="ghost"
+                        size="sm"
+                        className={`flex flex-col items-center gap-1 hover:bg-accent ${reaction.color}`}
+                        onClick={() => handleReaction(reaction.type)}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="text-xs">{reaction.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={toggleComments}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Comment
+            </Button>
+            
+            {!isAuthor && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+                onClick={() => setShowKnowledgeDialog(true)}
+              >
+                <Zap className="w-4 h-4 mr-2 text-yellow-500" />
+                Award
+              </Button>
+            )}
+            
+            <Button variant="ghost" size="sm" className="flex-1">
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="flex-1"
+              onClick={handleSave}
+            >
+              <Bookmark className={`w-4 h-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
+              {isSaved ? 'Saved' : 'Save'}
+            </Button>
+          </div>
+
+          {/* Comments Section */}
+          {showComments && (
+            <div className="mt-6 pt-6 border-t border-border space-y-4">
+              {/* Add Comment */}
+              <div className="flex gap-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src="https://i.pravatar.cc/150?u=current" alt="You" />
+                  <AvatarFallback>Y</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-2">
+                  <Textarea
+                    placeholder="Write a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={2}
+                    disabled={isSubmittingComment}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={handleCommentSubmit}
+                      disabled={isSubmittingComment || !newComment.trim()}
+                      className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                    >
+                      {isSubmittingComment ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Post
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comments List */}
+              {isLoadingComments ? (
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                </div>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No comments yet. Be the first to comment!
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <CommentItem key={comment.id} comment={comment} postId={post.id} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+
+        {/* Knowledge Points Dialog */}
+        <Dialog open={showKnowledgeDialog} onOpenChange={setShowKnowledgeDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-500" />
+                Award Knowledge Points
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Award knowledge points to recognize quality content (max 100 points per post)
+              </p>
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Already Awarded:</span>
+                  <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                    {userKnowledgePoints} / 100
+                  </span>
+                </div>
+                <div className="w-full bg-background rounded-full h-2">
+                  <div 
+                    className="bg-yellow-500 h-2 rounded-full transition-all"
+                    style={{ width: `${userKnowledgePoints}%` }}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((points) => (
+                  <Button
+                    key={points}
+                    variant="outline"
+                    onClick={() => handleAwardKnowledgePoints(points)}
+                    disabled={userKnowledgePoints + points > 100}
+                    className="flex flex-col items-center gap-1 h-auto py-3 hover:bg-yellow-500/10 hover:border-yellow-500"
+                  >
+                    <Zap className="w-4 h-4 text-yellow-500" />
+                    <span className="text-xs font-semibold">{points}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowKnowledgeDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Card>
+    );
+  }
+
+  // Regular post format for non-articles
   return (
     <Card>
       <CardContent className="p-6">
@@ -418,16 +768,7 @@ export function PostCard({ post }: PostCardProps) {
           <div className="space-y-3">
             <h3 className="text-lg font-semibold">{post.title}</h3>
             {post.content && (
-              <>
-                {post.type === 'ARTICLE' ? (
-                  <div 
-                    className="prose prose-sm max-w-none text-sm text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: post.content }}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
-                )}
-              </>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
             )}
 
             {/* Media */}
