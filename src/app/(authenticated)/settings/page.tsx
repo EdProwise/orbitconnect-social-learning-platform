@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,19 +8,124 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { User, Lock, Bell, Eye, Shield } from 'lucide-react';
+import { User, Lock, Bell, Eye, X, Plus } from 'lucide-react';
+import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    bio: '',
+    currentTown: '',
+    phone: '',
+    socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
+    class: '',
+    schoolHistory: [{ schoolName: '', from: '', to: '' }],
+    aboutYourself: '',
+  });
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    // TODO: Implement save functionality
-    setTimeout(() => {
-      setIsSaving(false);
-      alert('Settings saved successfully!');
-    }, 1000);
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true);
+      const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+      
+      if (!user.userId) {
+        toast.error('Please log in to access settings');
+        return;
+      }
+
+      const userData = await apiRequest(`/api/users?id=${user.userId}`, { method: 'GET' });
+      setCurrentUser(userData);
+      setProfileForm({
+        name: userData.name || '',
+        email: userData.email || '',
+        bio: userData.bio || '',
+        currentTown: userData.currentTown || '',
+        phone: userData.phone || '',
+        socialMediaLinks: userData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
+        class: userData.class || '',
+        schoolHistory: userData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
+        aboutYourself: userData.aboutYourself || '',
+      });
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+      toast.error('Failed to load user data');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleSaveProfile = async () => {
+    // Validate character limits
+    if (profileForm.bio.length > 250) {
+      toast.error('Bio must be 250 characters or less');
+      return;
+    }
+    if (profileForm.aboutYourself.length > 1000) {
+      toast.error('About Yourself must be 1000 characters or less');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+      
+      await apiRequest(`/api/users?id=${user.userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(profileForm),
+      });
+      
+      toast.success('Profile updated successfully!');
+      // Refresh user data
+      await fetchUserData();
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const addSchoolHistory = () => {
+    setProfileForm({
+      ...profileForm,
+      schoolHistory: [...profileForm.schoolHistory, { schoolName: '', from: '', to: '' }],
+    });
+  };
+
+  const removeSchoolHistory = (index: number) => {
+    const newHistory = profileForm.schoolHistory.filter((_, i) => i !== index);
+    setProfileForm({ ...profileForm, schoolHistory: newHistory });
+  };
+
+  const updateSchoolHistory = (index: number, field: string, value: string) => {
+    const newHistory = [...profileForm.schoolHistory];
+    newHistory[index] = { ...newHistory[index], [field]: value };
+    setProfileForm({ ...profileForm, schoolHistory: newHistory });
+  };
+
+  const isStudent = currentUser?.role === 'STUDENT';
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold font-poppins">Settings</h1>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <p className="text-muted-foreground">Loading settings...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -57,18 +162,190 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" />
+                <Input 
+                  id="name" 
+                  placeholder="John Doe"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                />
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="john@example.com"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                />
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" placeholder="Tell us about yourself..." rows={4} />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bio">Bio</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {profileForm.bio.length}/250 characters
+                  </span>
+                </div>
+                <Textarea 
+                  id="bio" 
+                  placeholder="Tell us about yourself..."
+                  rows={3}
+                  value={profileForm.bio}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 250) {
+                      setProfileForm({ ...profileForm, bio: e.target.value });
+                    }
+                  }}
+                  maxLength={250}
+                />
               </div>
+
+              {isStudent && (
+                <>
+                  <div className="pt-4 border-t">
+                    <h3 className="text-lg font-semibold mb-4">Student Information</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="currentTown">Current Town</Label>
+                        <Input
+                          id="currentTown"
+                          placeholder="e.g., Mumbai"
+                          value={profileForm.currentTown}
+                          onChange={(e) => setProfileForm({ ...profileForm, currentTown: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          placeholder="e.g., +91 98765 43210"
+                          value={profileForm.phone}
+                          onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="class">Class</Label>
+                        <Input
+                          id="class"
+                          placeholder="e.g., Class 10 / Year 2"
+                          value={profileForm.class}
+                          onChange={(e) => setProfileForm({ ...profileForm, class: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Social Media Links</Label>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Instagram username or URL"
+                            value={profileForm.socialMediaLinks.instagram || ''}
+                            onChange={(e) => setProfileForm({
+                              ...profileForm,
+                              socialMediaLinks: { ...profileForm.socialMediaLinks, instagram: e.target.value }
+                            })}
+                          />
+                          <Input
+                            placeholder="Twitter/X username or URL"
+                            value={profileForm.socialMediaLinks.twitter || ''}
+                            onChange={(e) => setProfileForm({
+                              ...profileForm,
+                              socialMediaLinks: { ...profileForm.socialMediaLinks, twitter: e.target.value }
+                            })}
+                          />
+                          <Input
+                            placeholder="LinkedIn profile URL"
+                            value={profileForm.socialMediaLinks.linkedin || ''}
+                            onChange={(e) => setProfileForm({
+                              ...profileForm,
+                              socialMediaLinks: { ...profileForm.socialMediaLinks, linkedin: e.target.value }
+                            })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>School History</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addSchoolHistory}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add School
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {profileForm.schoolHistory.map((school, index) => (
+                            <div key={index} className="p-4 border rounded-lg space-y-2 bg-muted/30">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">School {index + 1}</span>
+                                {profileForm.schoolHistory.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeSchoolHistory(index)}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <Input
+                                value={school.schoolName}
+                                onChange={(e) => updateSchoolHistory(index, 'schoolName', e.target.value)}
+                                placeholder="School Name"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={school.from}
+                                  onChange={(e) => updateSchoolHistory(index, 'from', e.target.value)}
+                                  placeholder="From (e.g., 2020)"
+                                />
+                                <Input
+                                  value={school.to}
+                                  onChange={(e) => updateSchoolHistory(index, 'to', e.target.value)}
+                                  placeholder="To (e.g., 2024)"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="aboutYourself">About Yourself</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {profileForm.aboutYourself.length}/1000 characters
+                          </span>
+                        </div>
+                        <Textarea
+                          id="aboutYourself"
+                          placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
+                          rows={6}
+                          value={profileForm.aboutYourself}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 1000) {
+                              setProfileForm({ ...profileForm, aboutYourself: e.target.value });
+                            }
+                          }}
+                          maxLength={1000}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Button 
-                onClick={handleSave}
+                onClick={handleSaveProfile}
                 disabled={isSaving}
                 className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
               >
