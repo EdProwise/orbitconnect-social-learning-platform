@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { TrendingTopics } from '@/components/feed/trending-topics';
 import { 
   Plus,
   FileQuestion,
   Video,
   MessageCircle,
-  Calendar,
-  TrendingUp,
   Users
 } from 'lucide-react';
 import { JWTPayload } from '@/lib/auth';
@@ -122,20 +121,7 @@ export function RightSidebar({ user }: RightSidebarProps) {
       )}
 
       {/* Trending Topics */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Trending Topics
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <TopicItem topic="#MachineLearning" posts={234} />
-          <TopicItem topic="#StudyTips" posts={189} />
-          <TopicItem topic="#CareerAdvice" posts={156} />
-          <TopicItem topic="#WebDevelopment" posts={142} />
-        </CardContent>
-      </Card>
+      <TrendingTopics />
     </div>
   );
 }

@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Send, Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface Message {
   id: number;
@@ -27,30 +30,56 @@ interface Conversation {
 }
 
 export default function MessagesPage() {
+  const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const currentUserId = 5; // TODO: Get from auth context
+  
+  // Get current user from localStorage
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchConversations();
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setCurrentUserId(user.id);
+    }
   }, []);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation);
+    if (currentUserId) {
+      fetchConversations();
+      
+      // Check for userId in URL params to start a conversation
+      const userIdParam = searchParams?.get('userId');
+      if (userIdParam) {
+        setSelectedConversation(parseInt(userIdParam));
+      }
     }
-  }, [selectedConversation]);
+  }, [currentUserId, searchParams]);
+
+  useEffect(() => {
+    if (selectedConversation && currentUserId) {
+      fetchMessages(selectedConversation);
+      
+      // Poll for new messages every 5 seconds
+      const interval = setInterval(() => fetchMessages(selectedConversation), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedConversation, currentUserId]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const fetchConversations = async () => {
+    if (!currentUserId) return;
+    
     try {
       const connectionsData = await apiRequest(
         `/api/connections?userId=${currentUserId}&status=ACCEPTED`,
@@ -68,11 +97,18 @@ export default function MessagesPage() {
             { method: 'GET' }
           );
 
+          // Filter to get actual last message between these two users
+          const relevantMessages = messagesData.filter(
+            (msg: Message) =>
+              (msg.senderId === currentUserId && msg.receiverId === otherUserId) ||
+              (msg.senderId === otherUserId && msg.receiverId === currentUserId)
+          );
+
           return {
             userId: otherUserId,
             user: userData,
-            lastMessage: messagesData[0] || null,
-            unreadCount: 0, // TODO: Calculate unread count
+            lastMessage: relevantMessages[0] || null,
+            unreadCount: 0,
           };
         })
       );
@@ -84,6 +120,8 @@ export default function MessagesPage() {
   };
 
   const fetchMessages = async (userId: number) => {
+    if (!currentUserId) return;
+    
     try {
       setIsLoading(true);
       const data = await apiRequest(
@@ -97,6 +135,17 @@ export default function MessagesPage() {
           (msg.senderId === userId && msg.receiverId === currentUserId)
       );
       setMessages(filtered);
+      
+      // Mark messages as read
+      const unreadMessages = filtered.filter(
+        (msg: Message) => msg.senderId === userId && !msg.readAt
+      );
+      unreadMessages.forEach((msg: Message) => {
+        apiRequest(`/api/messages?id=${msg.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ readAt: new Date().toISOString() }),
+        });
+      });
     } catch (error) {
       console.error('Failed to fetch messages:', error);
     } finally {
@@ -106,7 +155,7 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation || !currentUserId) return;
 
     setIsSending(true);
     try {
@@ -115,13 +164,15 @@ export default function MessagesPage() {
         body: JSON.stringify({
           senderId: currentUserId,
           receiverId: selectedConversation,
-          content: newMessage,
+          content: newMessage.trim(),
         }),
       });
       setMessages([...messages, message]);
       setNewMessage('');
+      toast.success('Message sent');
     } catch (error) {
       console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
     } finally {
       setIsSending(false);
     }
@@ -130,6 +181,18 @@ export default function MessagesPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (!currentUserId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)]">
@@ -141,44 +204,56 @@ export default function MessagesPage() {
               <h2 className="text-lg font-semibold font-poppins mb-3">Messages</h2>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search messages..." className="pl-9" />
+                <Input 
+                  placeholder="Search messages..." 
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
             </div>
             <ScrollArea className="h-[calc(100%-7rem)]">
-              {conversations.map((conv) => (
-                <button
-                  key={conv.userId}
-                  onClick={() => setSelectedConversation(conv.userId)}
-                  className={`w-full p-4 flex items-start gap-3 hover:bg-accent transition-colors ${
-                    selectedConversation === conv.userId ? 'bg-accent' : ''
-                  }`}
-                >
-                  <Avatar>
-                    <AvatarImage src={conv.user.avatar || ''} alt={conv.user.name} />
-                    <AvatarFallback>{conv.user.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-sm truncate">{conv.user.name}</span>
+              {filteredConversations.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground text-sm">
+                  {searchQuery ? 'No conversations found' : 'No connections yet. Connect with people to start messaging!'}
+                </div>
+              ) : (
+                filteredConversations.map((conv) => (
+                  <button
+                    key={conv.userId}
+                    onClick={() => setSelectedConversation(conv.userId)}
+                    className={`w-full p-4 flex items-start gap-3 hover:bg-accent transition-colors ${
+                      selectedConversation === conv.userId ? 'bg-accent' : ''
+                    }`}
+                  >
+                    <Avatar>
+                      <AvatarImage src={conv.user.avatar || ''} alt={conv.user.name} />
+                      <AvatarFallback>{conv.user.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-sm truncate">{conv.user.name}</span>
+                        {conv.lastMessage && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: true })}
+                          </span>
+                        )}
+                      </div>
                       {conv.lastMessage && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: true })}
-                        </span>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {conv.lastMessage.senderId === currentUserId ? 'You: ' : ''}
+                          {conv.lastMessage.content}
+                        </p>
+                      )}
+                      {conv.unreadCount > 0 && (
+                        <Badge className="mt-1 bg-[#854cf4] hover:bg-[#854cf4] text-xs">
+                          {conv.unreadCount}
+                        </Badge>
                       )}
                     </div>
-                    {conv.lastMessage && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {conv.lastMessage.content}
-                      </p>
-                    )}
-                    {conv.unreadCount > 0 && (
-                      <Badge className="mt-1 bg-[#854cf4] hover:bg-[#854cf4]">
-                        {conv.unreadCount}
-                      </Badge>
-                    )}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </ScrollArea>
           </div>
 
@@ -200,7 +275,9 @@ export default function MessagesPage() {
                       <p className="font-semibold">
                         {conversations.find(c => c.userId === selectedConversation)?.user.name || 'User'}
                       </p>
-                      <p className="text-xs text-muted-foreground">Active now</p>
+                      <p className="text-xs text-muted-foreground">
+                        {conversations.find(c => c.userId === selectedConversation)?.user.role || ''}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -210,6 +287,10 @@ export default function MessagesPage() {
                   {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                      No messages yet. Start the conversation!
                     </div>
                   ) : (
                     <div className="space-y-4">

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface Notification {
   id: number;
@@ -41,13 +42,31 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const currentUserId = 5; // TODO: Get from auth context
+  
+  // Get current user from localStorage
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchNotifications();
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setCurrentUserId(user.id);
+    }
   }, []);
 
+  useEffect(() => {
+    if (currentUserId) {
+      fetchNotifications();
+      
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUserId]);
+
   const fetchNotifications = async () => {
+    if (!currentUserId) return;
+    
     try {
       setIsLoading(true);
       const data = await apiRequest(
@@ -71,20 +90,31 @@ export default function NotificationsPage() {
       setNotifications(notifications.map(n => 
         n.id === id ? { ...n, readAt: new Date().toISOString() } : n
       ));
+      toast.success('Marked as read');
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+      toast.error('Failed to mark as read');
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      await apiRequest(
-        `/api/notifications?userId=${currentUserId}&markAllRead=true`,
-        { method: 'PUT' }
+      const unreadIds = notifications.filter(n => !n.readAt).map(n => n.id);
+      
+      await Promise.all(
+        unreadIds.map(id => 
+          apiRequest(`/api/notifications?id=${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ readAt: new Date().toISOString() }),
+          })
+        )
       );
+      
       fetchNotifications();
+      toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+      toast.error('Failed to mark all as read');
     }
   };
 
@@ -92,8 +122,10 @@ export default function NotificationsPage() {
     try {
       await apiRequest(`/api/notifications?id=${id}`, { method: 'DELETE' });
       setNotifications(notifications.filter(n => n.id !== id));
+      toast.success('Notification deleted');
     } catch (error) {
       console.error('Failed to delete notification:', error);
+      toast.error('Failed to delete notification');
     }
   };
 

@@ -28,7 +28,8 @@ import {
   BarChart3,
   Gift,
   Edit2,
-  Trash2
+  Trash2,
+  Zap
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/api-client';
@@ -101,6 +102,9 @@ export function PostCard({ post }: PostCardProps) {
   const [editTitle, setEditTitle] = useState(post.title);
   const [editContent, setEditContent] = useState(post.content || '');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [knowledgePoints, setKnowledgePoints] = useState(0);
+  const [userKnowledgePoints, setUserKnowledgePoints] = useState(0);
+  const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
 
   // Get current user
   const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -110,10 +114,16 @@ export function PostCard({ post }: PostCardProps) {
   useEffect(() => {
     fetchAuthor();
     fetchReactions();
+    fetchKnowledgePoints();
     if (post.type === 'POLL' && post.pollOptions) {
       initializePollVotes();
     }
   }, [post.id]);
+
+  const fetchKnowledgePoints = () => {
+    // Simulate fetching knowledge points
+    setKnowledgePoints(Math.floor(Math.random() * 100));
+  };
 
   const initializePollVotes = () => {
     if (post.pollOptions) {
@@ -154,6 +164,23 @@ export function PostCard({ post }: PostCardProps) {
       console.error('Failed to fetch comments:', error);
     } finally {
       setIsLoadingComments(false);
+    }
+  };
+
+  const handleAwardKnowledgePoints = async (points: number) => {
+    if (userKnowledgePoints + points > 100) {
+      toast.error('Maximum 100 knowledge points can be awarded per post');
+      return;
+    }
+
+    try {
+      setUserKnowledgePoints(userKnowledgePoints + points);
+      setKnowledgePoints(knowledgePoints + points);
+      setShowKnowledgeDialog(false);
+      toast.success(`Awarded ${points} knowledge points!`);
+    } catch (error) {
+      console.error('Failed to award knowledge points:', error);
+      toast.error('Failed to award knowledge points');
     }
   };
 
@@ -493,14 +520,22 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         )}
 
-        {/* Reactions Summary */}
+        {/* Reactions Summary with Knowledge Points */}
         <div className="flex items-center gap-4 pt-4 mt-4 border-t border-border text-xs text-muted-foreground">
           <span>{reactions.length} reactions</span>
           <span>{comments.length} comments</span>
           <span>{post.viewCount} views</span>
+          {knowledgePoints > 0 && (
+            <div className="flex items-center gap-1">
+              <Zap className="w-3 h-3 text-yellow-500" />
+              <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                {knowledgePoints} Knowledge Points
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Action Buttons - Collapsed Reactions */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 pt-4 border-t border-border mt-2">
           <div className="relative flex-1">
             <Button
@@ -545,6 +580,19 @@ export function PostCard({ post }: PostCardProps) {
             <MessageCircle className="w-4 h-4 mr-2" />
             Comment
           </Button>
+          
+          {!isAuthor && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowKnowledgeDialog(true)}
+            >
+              <Zap className="w-4 h-4 mr-2 text-yellow-500" />
+              Award
+            </Button>
+          )}
+          
           <Button variant="ghost" size="sm" className="flex-1">
             <Share2 className="w-4 h-4 mr-2" />
             Share
@@ -616,6 +664,56 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Knowledge Points Dialog */}
+      <Dialog open={showKnowledgeDialog} onOpenChange={setShowKnowledgeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-yellow-500" />
+              Award Knowledge Points
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Award knowledge points to recognize quality content (max 100 points per post)
+            </p>
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Already Awarded:</span>
+                <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                  {userKnowledgePoints} / 100
+                </span>
+              </div>
+              <div className="w-full bg-background rounded-full h-2">
+                <div 
+                  className="bg-yellow-500 h-2 rounded-full transition-all"
+                  style={{ width: `${userKnowledgePoints}%` }}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((points) => (
+                <Button
+                  key={points}
+                  variant="outline"
+                  onClick={() => handleAwardKnowledgePoints(points)}
+                  disabled={userKnowledgePoints + points > 100}
+                  className="flex flex-col items-center gap-1 h-auto py-3 hover:bg-yellow-500/10 hover:border-yellow-500"
+                >
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  <span className="text-xs font-semibold">{points}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowKnowledgeDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
