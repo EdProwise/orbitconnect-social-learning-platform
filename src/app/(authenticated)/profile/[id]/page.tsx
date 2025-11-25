@@ -643,6 +643,27 @@ export default function ProfilePage() {
                 {/* Overview Section */}
                 {aboutActiveSection === 'overview' && (
                   <div className="space-y-4">
+                    {/* Bio Section */}
+                    {profile.bio && (
+                      <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <User className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium mb-1">Bio</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {isStudent && school && (
                       <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
                         <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
@@ -740,17 +761,27 @@ export default function ProfilePage() {
                       </div>
                     )}
 
-                    {isOwnProfile && isStudent && !school && !profile.currentTown && !profile.phone && (
+                    {isOwnProfile && isStudent && !profile.bio && !school && !profile.currentTown && !profile.phone && (
                       <div className="py-12 text-center">
                         <p className="text-sm text-muted-foreground mb-4">Add information to help others know you better</p>
-                        <Button
-                          size="sm"
-                          onClick={() => setIsAboutEditMode(true)}
-                          className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                        >
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Add Information
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Information
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => router.push('/settings')}
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Edit in Settings
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
