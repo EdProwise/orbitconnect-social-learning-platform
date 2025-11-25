@@ -35,37 +35,18 @@ export function RichTextEditor({
   editable = true,
 }: RichTextEditorProps) {
   const editor = useEditor({
-    immediatelyRender: false,
     extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
-      Placeholder.configure({
-        placeholder,
-      }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-lg',
-        },
-      }),
+      StarterKit,
+      Image,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-[#854cf4] underline hover:text-[#7743e0]',
-        },
       }),
     ],
     content,
     editable,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[300px] max-w-none p-4',
-      },
     },
   });
 
@@ -74,10 +55,39 @@ export function RichTextEditor({
   }
 
   const addImage = () => {
-    const url = window.prompt('Enter image URL');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
+      // Convert to base64 for demo purposes
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const url = reader.result as string;
+        if (url && editor) {
+          editor.chain().focus().setImage({ src: url }).run();
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    
+    input.click();
   };
 
   const addLink = () => {

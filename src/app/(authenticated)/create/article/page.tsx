@@ -10,6 +10,7 @@ import { RichTextEditor } from '@/components/editor/rich-text-editor';
 import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function CreateArticlePage() {
   const router = useRouter();
@@ -17,23 +18,47 @@ export default function CreateArticlePage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState('');
-  const [imagePreview, setImagePreview] = useState('');
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState('');
 
-  const handleImageUrlChange = (url: string) => {
-    setCoverImage(url);
-    setImagePreview(url);
+  const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setCoverImageFile(file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setCoverImagePreview(result);
+      setCoverImage(result); // Use base64 for demo purposes
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter a title for your article');
+      toast.error('Please enter a title for your article');
       return;
     }
 
     if (!content.trim() || content === '<p></p>') {
-      alert('Please write some content for your article');
+      toast.error('Please write some content for your article');
       return;
     }
 
@@ -45,7 +70,7 @@ export default function CreateArticlePage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to create an article');
+        toast.error('Please log in to create an article');
         router.push('/login');
         return;
       }
@@ -67,11 +92,13 @@ export default function CreateArticlePage() {
         body: JSON.stringify(postData),
       });
 
+      toast.success('Article published successfully!');
+      
       // Redirect to feed
       router.push('/feed');
     } catch (error) {
       console.error('Failed to create article:', error);
-      alert('Failed to create article. Please try again.');
+      toast.error('Failed to create article. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -119,19 +146,20 @@ export default function CreateArticlePage() {
                 <div className="flex gap-2">
                   <Input
                     id="coverImage"
-                    placeholder="Enter image URL..."
-                    value={coverImage}
-                    onChange={(e) => handleImageUrlChange(e.target.value)}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverImageSelect}
                     disabled={isSubmitting}
                   />
-                  {imagePreview && (
+                  {coverImagePreview && (
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
                       onClick={() => {
                         setCoverImage('');
-                        setImagePreview('');
+                        setCoverImageFile(null);
+                        setCoverImagePreview('');
                       }}
                       disabled={isSubmitting}
                     >
@@ -139,22 +167,18 @@ export default function CreateArticlePage() {
                     </Button>
                   )}
                 </div>
-                {imagePreview && (
+                {coverImagePreview && (
                   <div className="relative w-full h-64 rounded-lg overflow-hidden border border-border">
                     <img
-                      src={imagePreview}
+                      src={coverImagePreview}
                       alt="Cover preview"
                       className="w-full h-full object-cover"
-                      onError={() => {
-                        setImagePreview('');
-                        alert('Failed to load image. Please check the URL.');
-                      }}
                     />
                   </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Add a cover image to make your article stand out
+                Upload a cover image to make your article stand out (max 5MB, JPG/PNG/GIF)
               </p>
             </div>
 

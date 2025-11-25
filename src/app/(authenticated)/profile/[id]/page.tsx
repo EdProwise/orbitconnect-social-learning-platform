@@ -74,7 +74,8 @@ export default function ProfilePage() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState<'avatar' | 'cover' | null>(null);
-  const [imageUrl, setImageUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   // Get current user
   const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
@@ -166,21 +167,52 @@ export default function ProfilePage() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleImageUpload = async () => {
-    if (!imageUrl.trim()) {
-      toast.error('Please enter an image URL');
+    if (!selectedFile && !previewUrl) {
+      toast.error('Please select an image file');
       return;
     }
 
     try {
       const field = showImageUpload === 'avatar' ? 'avatar' : 'coverImage';
+      
+      // For demo purposes, we'll use the preview URL (base64)
+      // In production, you'd upload to a storage service first
       const updated = await apiRequest(`/api/users?id=${userId}`, {
         method: 'PUT',
-        body: JSON.stringify({ [field]: imageUrl.trim() }),
+        body: JSON.stringify({ [field]: previewUrl }),
       });
+      
       setProfile(updated);
       setShowImageUpload(null);
-      setImageUrl('');
+      setSelectedFile(null);
+      setPreviewUrl('');
       toast.success(`${showImageUpload === 'avatar' ? 'Profile' : 'Cover'} image updated!`);
     } catch (error) {
       console.error('Failed to update image:', error);
@@ -703,7 +735,11 @@ export default function ProfilePage() {
       </Tabs>
 
       {/* Image Upload Dialog */}
-      <Dialog open={showImageUpload !== null} onOpenChange={() => setShowImageUpload(null)}>
+      <Dialog open={showImageUpload !== null} onOpenChange={() => {
+        setShowImageUpload(null);
+        setSelectedFile(null);
+        setPreviewUrl('');
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -712,28 +748,24 @@ export default function ProfilePage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Image URL</label>
+              <label className="text-sm font-medium">Upload Image</label>
               <Input
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Enter a direct URL to an image
+                Select an image file (max 5MB, JPG/PNG/GIF)
               </p>
             </div>
-            {imageUrl && (
+            {previewUrl && (
               <div className="border rounded-lg p-4">
                 <p className="text-sm font-medium mb-2">Preview:</p>
                 <img 
-                  src={imageUrl} 
+                  src={previewUrl} 
                   alt="Preview" 
                   className={showImageUpload === 'avatar' ? 'w-32 h-32 rounded-full object-cover' : 'w-full h-48 rounded-lg object-cover'}
-                  onError={(e) => {
-                    e.currentTarget.src = '';
-                    e.currentTarget.alt = 'Invalid image URL';
-                  }}
                 />
               </div>
             )}
@@ -741,12 +773,14 @@ export default function ProfilePage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowImageUpload(null);
-              setImageUrl('');
+              setSelectedFile(null);
+              setPreviewUrl('');
             }}>
               Cancel
             </Button>
             <Button 
               onClick={handleImageUpload}
+              disabled={!selectedFile && !previewUrl}
               className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
             >
               Update Image
