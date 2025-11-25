@@ -26,7 +26,7 @@ export default function ProfilesPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('STUDENT');
 
   useEffect(() => {
     fetchUsers();
@@ -56,9 +56,9 @@ export default function ProfilesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold font-poppins">Discover People</h1>
+        <h1 className="text-3xl font-bold font-poppins">Meet GenZ Students</h1>
         <p className="text-muted-foreground">
-          Connect with students, teachers, and schools
+          Connect with students from around the world
         </p>
 
         {/* Filters */}
@@ -66,7 +66,7 @@ export default function ProfilesPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search people..."
+              placeholder="Search students..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
