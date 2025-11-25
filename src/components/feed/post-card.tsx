@@ -127,14 +127,32 @@ export function PostCard({ post }: PostCardProps) {
     fetchAuthor();
     fetchReactions();
     fetchKnowledgePoints();
+    fetchUserKnowledgePoints();
     if (post.type === 'POLL' && post.pollOptions) {
       initializePollVotes();
     }
   }, [post.id]);
 
-  const fetchKnowledgePoints = () => {
-    // Simulate fetching knowledge points
-    setKnowledgePoints(Math.floor(Math.random() * 100));
+  const fetchKnowledgePoints = async () => {
+    try {
+      const data = await apiRequest(`/api/knowledge-points?postId=${post.id}`, { method: 'GET' });
+      setKnowledgePoints(data.postTotalPoints || 0);
+    } catch (error) {
+      console.error('Failed to fetch knowledge points:', error);
+    }
+  };
+
+  const fetchUserKnowledgePoints = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const data = await apiRequest(`/api/knowledge-points?postId=${post.id}&awarderId=${currentUser.id}`, { 
+        method: 'GET' 
+      });
+      setUserKnowledgePoints(data.totalPointsAwarded || 0);
+    } catch (error) {
+      console.error('Failed to fetch user knowledge points:', error);
+    }
   };
 
   const initializePollVotes = () => {
@@ -180,19 +198,42 @@ export function PostCard({ post }: PostCardProps) {
   };
 
   const handleAwardKnowledgePoints = async (points: number) => {
+    if (!currentUser) {
+      toast.error('Please log in to award knowledge points');
+      return;
+    }
+
     if (userKnowledgePoints + points > 100) {
       toast.error('Maximum 100 knowledge points can be awarded per post');
       return;
     }
 
     try {
-      setUserKnowledgePoints(userKnowledgePoints + points);
-      setKnowledgePoints(knowledgePoints + points);
+      const data = await apiRequest('/api/knowledge-points', {
+        method: 'POST',
+        body: JSON.stringify({
+          postId: post.id,
+          awarderId: currentUser.id,
+          points: points,
+        }),
+      });
+
+      // Update local state with server response
+      setUserKnowledgePoints(data.totalPointsAwarded);
+      setKnowledgePoints(data.postTotalPoints);
       setShowKnowledgeDialog(false);
       toast.success(`Awarded ${points} knowledge points!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to award knowledge points:', error);
-      toast.error('Failed to award knowledge points');
+      
+      // Handle specific error codes
+      if (error.message && error.message.includes('already awarded')) {
+        toast.error('You have already reached the maximum points for this post');
+      } else if (error.message && error.message.includes('your own post')) {
+        toast.error('You cannot award points to your own post');
+      } else {
+        toast.error('Failed to award knowledge points');
+      }
     }
   };
 

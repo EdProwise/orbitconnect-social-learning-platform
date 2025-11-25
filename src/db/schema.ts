@@ -239,3 +239,14 @@ export const postTags = sqliteTable('post_tags', {
 }, (table) => ({
   postTagIdx: index('post_tag_idx').on(table.postId, table.tagId),
 }));
+
+// Knowledge Point Awards table
+export const knowledgePointAwards = sqliteTable('knowledge_point_awards', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  postId: integer('post_id').notNull().references(() => posts.id),
+  awarderId: integer('awarder_id').notNull().references(() => users.id),
+  points: integer('points').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  postAwarderIdx: index('post_awarder_idx').on(table.postId, table.awarderId),
+}));
