@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const userId = params.id as string;
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -352,13 +353,22 @@ export default function ProfilePage() {
                           </Button>
                         </>
                       ) : (
-                        <Button
-                          onClick={() => setIsEditMode(true)}
-                          className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                        >
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Edit Profile
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => setIsEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Edit Profile
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => router.push('/settings')}
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Edit in Settings
+                          </Button>
+                        </>
                       )}
                     </>
                   ) : (
