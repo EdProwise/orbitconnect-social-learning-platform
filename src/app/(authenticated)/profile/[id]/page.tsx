@@ -29,6 +29,9 @@ import {
   Briefcase,
   GraduationCap,
   Link as LinkIcon,
+  Instagram,
+  Twitter,
+  Linkedin,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
@@ -64,9 +67,18 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAboutEditMode, setIsAboutEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     bio: '',
+    currentTown: '',
+    phone: '',
+    socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
+    class: '',
+    schoolHistory: [{ schoolName: '', from: '', to: '' }],
+    aboutYourself: '',
+  });
+  const [aboutEditForm, setAboutEditForm] = useState({
     currentTown: '',
     phone: '',
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
@@ -102,6 +114,14 @@ export default function ProfilePage() {
       setEditForm({
         name: profileData.name,
         bio: profileData.bio || '',
+        currentTown: profileData.currentTown || '',
+        phone: profileData.phone || '',
+        socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
+        class: profileData.class || '',
+        schoolHistory: profileData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
+        aboutYourself: profileData.aboutYourself || '',
+      });
+      setAboutEditForm({
         currentTown: profileData.currentTown || '',
         phone: profileData.phone || '',
         socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
@@ -164,6 +184,29 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Failed to update profile:', error);
       toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveAbout = async () => {
+    if (aboutEditForm.aboutYourself.length > 1000) {
+      toast.error('About Yourself must be 1000 characters or less');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const updated = await apiRequest(`/api/users?id=${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(aboutEditForm),
+      });
+      setProfile(updated);
+      setIsAboutEditMode(false);
+      toast.success('About section updated successfully!');
+    } catch (error) {
+      console.error('Failed to update about section:', error);
+      toast.error('Failed to update about section');
     } finally {
       setIsSaving(false);
     }
@@ -240,6 +283,24 @@ export default function ProfilePage() {
     const newHistory = [...editForm.schoolHistory];
     newHistory[index] = { ...newHistory[index], [field]: value };
     setEditForm({ ...editForm, schoolHistory: newHistory });
+  };
+
+  const addSchoolHistoryAbout = () => {
+    setAboutEditForm({
+      ...aboutEditForm,
+      schoolHistory: [...aboutEditForm.schoolHistory, { schoolName: '', from: '', to: '' }],
+    });
+  };
+
+  const removeSchoolHistoryAbout = (index: number) => {
+    const newHistory = aboutEditForm.schoolHistory.filter((_, i) => i !== index);
+    setAboutEditForm({ ...aboutEditForm, schoolHistory: newHistory });
+  };
+
+  const updateSchoolHistoryAbout = (index: number, field: string, value: string) => {
+    const newHistory = [...aboutEditForm.schoolHistory];
+    newHistory[index] = { ...newHistory[index], [field]: value };
+    setAboutEditForm({ ...aboutEditForm, schoolHistory: newHistory });
   };
 
   if (isLoading) {
@@ -440,7 +501,6 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -450,252 +510,425 @@ export default function ProfilePage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">About</h3>
-              
-              {isEditMode && isStudent ? (
-                <div className="space-y-4">
-                  {/* Current Town */}
-                  <div className="space-y-2">
-                    <Label>Current Town</Label>
-                    <Input
-                      value={editForm.currentTown}
-                      onChange={(e) => setEditForm({ ...editForm, currentTown: e.target.value })}
-                      placeholder="e.g., Mumbai"
-                    />
+          {/* Redesigned About Card */}
+          <Card className="shadow-sm border-border/50">
+            <CardContent className="p-8">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold font-poppins">About</h3>
+                {isOwnProfile && !isAboutEditMode && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsAboutEditMode(true)}
+                    className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {isAboutEditMode && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsAboutEditMode(false);
+                        setAboutEditForm({
+                          currentTown: profile.currentTown || '',
+                          phone: profile.phone || '',
+                          socialMediaLinks: profile.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
+                          class: profile.class || '',
+                          schoolHistory: profile.schoolHistory || [{ schoolName: '', from: '', to: '' }],
+                          aboutYourself: profile.aboutYourself || '',
+                        });
+                      }}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveAbout}
+                      disabled={isSaving}
+                      className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {isAboutEditMode && isStudent ? (
+                <div className="space-y-6">
+                  {/* Contact Information Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Contact Information</h4>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-[#854cf4]" />
+                          Location
+                        </Label>
+                        <Input
+                          value={aboutEditForm.currentTown}
+                          onChange={(e) => setAboutEditForm({ ...aboutEditForm, currentTown: e.target.value })}
+                          placeholder="e.g., Mumbai, India"
+                          className="h-11"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <PhoneIcon className="w-4 h-4 text-[#854cf4]" />
+                          Phone Number
+                        </Label>
+                        <Input
+                          value={aboutEditForm.phone}
+                          onChange={(e) => setAboutEditForm({ ...aboutEditForm, phone: e.target.value })}
+                          placeholder="e.g., +91 98765 43210"
+                          className="h-11"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Phone */}
-                  <div className="space-y-2">
-                    <Label>Phone Number</Label>
-                    <Input
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      placeholder="e.g., +91 98765 43210"
-                    />
-                  </div>
+                  <div className="border-t border-border/50" />
 
-                  {/* Class */}
-                  <div className="space-y-2">
-                    <Label>Class</Label>
-                    <Input
-                      value={editForm.class}
-                      onChange={(e) => setEditForm({ ...editForm, class: e.target.value })}
-                      placeholder="e.g., Class 10 / Year 2"
-                    />
-                  </div>
-
-                  {/* Social Media Links */}
-                  <div className="space-y-2">
-                    <Label>Social Media Links</Label>
+                  {/* Education Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Education</h4>
+                    
                     <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-[#854cf4]" />
+                        Current Class
+                      </Label>
                       <Input
-                        value={editForm.socialMediaLinks.instagram || ''}
-                        onChange={(e) => setEditForm({
-                          ...editForm,
-                          socialMediaLinks: { ...editForm.socialMediaLinks, instagram: e.target.value }
-                        })}
-                        placeholder="Instagram username or URL"
+                        value={aboutEditForm.class}
+                        onChange={(e) => setAboutEditForm({ ...aboutEditForm, class: e.target.value })}
+                        placeholder="e.g., Class 10 / Year 2"
+                        className="h-11"
                       />
-                      <Input
-                        value={editForm.socialMediaLinks.twitter || ''}
-                        onChange={(e) => setEditForm({
-                          ...editForm,
-                          socialMediaLinks: { ...editForm.socialMediaLinks, twitter: e.target.value }
-                        })}
-                        placeholder="Twitter/X username or URL"
-                      />
-                      <Input
-                        value={editForm.socialMediaLinks.linkedin || ''}
-                        onChange={(e) => setEditForm({
-                          ...editForm,
-                          socialMediaLinks: { ...editForm.socialMediaLinks, linkedin: e.target.value }
-                        })}
-                        placeholder="LinkedIn profile URL"
-                      />
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Briefcase className="w-4 h-4 text-[#854cf4]" />
+                          School History
+                        </Label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={addSchoolHistoryAbout}
+                          className="h-8 text-xs"
+                        >
+                          + Add School
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {aboutEditForm.schoolHistory.map((school, index) => (
+                          <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-muted-foreground">School {index + 1}</span>
+                              {aboutEditForm.schoolHistory.length > 1 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeSchoolHistoryAbout(index)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                            <Input
+                              value={school.schoolName}
+                              onChange={(e) => updateSchoolHistoryAbout(index, 'schoolName', e.target.value)}
+                              placeholder="School Name"
+                              className="h-11"
+                            />
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input
+                                value={school.from}
+                                onChange={(e) => updateSchoolHistoryAbout(index, 'from', e.target.value)}
+                                placeholder="From (e.g., 2020)"
+                                className="h-11"
+                              />
+                              <Input
+                                value={school.to}
+                                onChange={(e) => updateSchoolHistoryAbout(index, 'to', e.target.value)}
+                                placeholder="To (e.g., 2024)"
+                                className="h-11"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* School History */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>School History</Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={addSchoolHistory}
-                      >
-                        Add School
-                      </Button>
-                    </div>
+                  <div className="border-t border-border/50" />
+
+                  {/* Social Media Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Social Links</h4>
+                    
                     <div className="space-y-3">
-                      {editForm.schoolHistory.map((school, index) => (
-                        <div key={index} className="p-4 border rounded-lg space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">School {index + 1}</span>
-                            {editForm.schoolHistory.length > 1 && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeSchoolHistory(index)}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                          <Input
-                            value={school.schoolName}
-                            onChange={(e) => updateSchoolHistory(index, 'schoolName', e.target.value)}
-                            placeholder="School Name"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              value={school.from}
-                              onChange={(e) => updateSchoolHistory(index, 'from', e.target.value)}
-                              placeholder="From (e.g., 2020)"
-                            />
-                            <Input
-                              value={school.to}
-                              onChange={(e) => updateSchoolHistory(index, 'to', e.target.value)}
-                              placeholder="To (e.g., 2024)"
-                            />
-                          </div>
-                        </div>
-                      ))}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Instagram className="w-4 h-4 text-[#854cf4]" />
+                          Instagram
+                        </Label>
+                        <Input
+                          value={aboutEditForm.socialMediaLinks.instagram || ''}
+                          onChange={(e) => setAboutEditForm({
+                            ...aboutEditForm,
+                            socialMediaLinks: { ...aboutEditForm.socialMediaLinks, instagram: e.target.value }
+                          })}
+                          placeholder="username or full URL"
+                          className="h-11"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Twitter className="w-4 h-4 text-[#854cf4]" />
+                          Twitter / X
+                        </Label>
+                        <Input
+                          value={aboutEditForm.socialMediaLinks.twitter || ''}
+                          onChange={(e) => setAboutEditForm({
+                            ...aboutEditForm,
+                            socialMediaLinks: { ...aboutEditForm.socialMediaLinks, twitter: e.target.value }
+                          })}
+                          placeholder="username or full URL"
+                          className="h-11"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Linkedin className="w-4 h-4 text-[#854cf4]" />
+                          LinkedIn
+                        </Label>
+                        <Input
+                          value={aboutEditForm.socialMediaLinks.linkedin || ''}
+                          onChange={(e) => setAboutEditForm({
+                            ...aboutEditForm,
+                            socialMediaLinks: { ...aboutEditForm.socialMediaLinks, linkedin: e.target.value }
+                          })}
+                          placeholder="profile URL"
+                          className="h-11"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* About Yourself */}
-                  <div className="space-y-2">
+                  <div className="border-t border-border/50" />
+
+                  {/* About Section */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label>About Yourself</Label>
+                      <Label className="text-sm font-medium">About Yourself</Label>
                       <span className="text-xs text-muted-foreground">
-                        {editForm.aboutYourself.length}/1000 characters
+                        {aboutEditForm.aboutYourself.length}/1000
                       </span>
                     </div>
                     <Textarea
-                      value={editForm.aboutYourself}
+                      value={aboutEditForm.aboutYourself}
                       onChange={(e) => {
                         if (e.target.value.length <= 1000) {
-                          setEditForm({ ...editForm, aboutYourself: e.target.value });
+                          setAboutEditForm({ ...aboutEditForm, aboutYourself: e.target.value });
                         }
                       }}
                       placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
                       rows={6}
                       maxLength={1000}
+                      className="resize-none"
                     />
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span>{profile.email}</span>
-                  </div>
-                  
-                  {isStudent && profile.currentTown && (
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span>{profile.currentTown}</span>
-                    </div>
-                  )}
-                  
-                  {isStudent && profile.phone && (
-                    <div className="flex items-center gap-3">
-                      <PhoneIcon className="w-4 h-4 text-muted-foreground" />
-                      <span>{profile.phone}</span>
-                    </div>
-                  )}
-                  
-                  {isStudent && profile.class && (
-                    <div className="flex items-center gap-3">
-                      <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                      <span>{profile.class}</span>
-                    </div>
-                  )}
-                  
-                  {school && (
-                    <div className="flex items-center gap-3">
-                      <SchoolIcon className="w-4 h-4 text-muted-foreground" />
-                      <span>{school.name}</span>
-                    </div>
-                  )}
-                  
-                  {isStudent && profile.socialMediaLinks && (
-                    <div className="space-y-2 pt-2">
-                      <h4 className="font-medium text-xs text-muted-foreground uppercase">Social Media</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {profile.socialMediaLinks.instagram && (
-                          <a
-                            href={profile.socialMediaLinks.instagram.startsWith('http') 
-                              ? profile.socialMediaLinks.instagram 
-                              : `https://instagram.com/${profile.socialMediaLinks.instagram}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[#854cf4] hover:underline"
-                          >
-                            <LinkIcon className="w-3 h-3" />
-                            Instagram
-                          </a>
+                <div className="space-y-6">
+                  {/* Contact Information */}
+                  {(profile.email || (isStudent && (profile.currentTown || profile.phone))) && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Contact Information</h4>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                          <Mail className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+                            <p className="text-sm font-medium truncate">{profile.email}</p>
+                          </div>
+                        </div>
+                        
+                        {isStudent && profile.currentTown && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                            <MapPin className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                              <p className="text-sm font-medium truncate">{profile.currentTown}</p>
+                            </div>
+                          </div>
                         )}
-                        {profile.socialMediaLinks.twitter && (
-                          <a
-                            href={profile.socialMediaLinks.twitter.startsWith('http') 
-                              ? profile.socialMediaLinks.twitter 
-                              : `https://twitter.com/${profile.socialMediaLinks.twitter}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[#854cf4] hover:underline"
-                          >
-                            <LinkIcon className="w-3 h-3" />
-                            Twitter
-                          </a>
-                        )}
-                        {profile.socialMediaLinks.linkedin && (
-                          <a
-                            href={profile.socialMediaLinks.linkedin.startsWith('http') 
-                              ? profile.socialMediaLinks.linkedin 
-                              : `https://linkedin.com/in/${profile.socialMediaLinks.linkedin}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[#854cf4] hover:underline"
-                          >
-                            <LinkIcon className="w-3 h-3" />
-                            LinkedIn
-                          </a>
+                        
+                        {isStudent && profile.phone && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                            <PhoneIcon className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs text-muted-foreground mb-0.5">Phone</p>
+                              <p className="text-sm font-medium">{profile.phone}</p>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
                   
-                  {isStudent && profile.schoolHistory && profile.schoolHistory.length > 0 && (
-                    <div className="space-y-2 pt-2">
-                      <h4 className="font-medium text-xs text-muted-foreground uppercase">School History</h4>
-                      {profile.schoolHistory.map((school: any, index: number) => (
-                        school.schoolName && (
-                          <div key={index} className="flex items-start gap-3 pl-1">
-                            <Briefcase className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  {(profile.email || (isStudent && (profile.currentTown || profile.phone))) && (isStudent && (profile.class || school)) && (
+                    <div className="border-t border-border/50" />
+                  )}
+
+                  {/* Education */}
+                  {isStudent && (profile.class || school) && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Education</h4>
+                      <div className="space-y-2">
+                        {profile.class && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                            <GraduationCap className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
                             <div>
-                              <p className="font-medium">{school.schoolName}</p>
-                              {(school.from || school.to) && (
-                                <p className="text-xs text-muted-foreground">
-                                  {school.from} - {school.to || 'Present'}
-                                </p>
-                              )}
+                              <p className="text-xs text-muted-foreground mb-0.5">Current Class</p>
+                              <p className="text-sm font-medium">{profile.class}</p>
                             </div>
                           </div>
-                        )
-                      ))}
+                        )}
+                        
+                        {school && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                            <SchoolIcon className="w-5 h-5 text-[#854cf4] flex-shrink-0" />
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-0.5">School / Institution</p>
+                              <p className="text-sm font-medium">{school.name}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                   
+                  {isStudent && profile.schoolHistory && profile.schoolHistory.length > 0 && profile.schoolHistory.some((s: any) => s.schoolName) && (
+                    <>
+                      <div className="border-t border-border/50" />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">School History</h4>
+                        <div className="space-y-2">
+                          {profile.schoolHistory.map((school: any, index: number) => (
+                            school.schoolName && (
+                              <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                                <Briefcase className="w-5 h-5 text-[#854cf4] flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{school.schoolName}</p>
+                                  {(school.from || school.to) && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {school.from} - {school.to || 'Present'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {isStudent && profile.socialMediaLinks && (profile.socialMediaLinks.instagram || profile.socialMediaLinks.twitter || profile.socialMediaLinks.linkedin) && (
+                    <>
+                      <div className="border-t border-border/50" />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Social Links</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {profile.socialMediaLinks.instagram && (
+                            <a
+                              href={profile.socialMediaLinks.instagram.startsWith('http') 
+                                ? profile.socialMediaLinks.instagram 
+                                : `https://instagram.com/${profile.socialMediaLinks.instagram}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/50 hover:border-[#854cf4] hover:bg-[#854cf4]/5 transition-all"
+                            >
+                              <Instagram className="w-4 h-4 text-[#854cf4]" />
+                              <span className="text-sm font-medium">Instagram</span>
+                            </a>
+                          )}
+                          {profile.socialMediaLinks.twitter && (
+                            <a
+                              href={profile.socialMediaLinks.twitter.startsWith('http') 
+                                ? profile.socialMediaLinks.twitter 
+                                : `https://twitter.com/${profile.socialMediaLinks.twitter}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/50 hover:border-[#854cf4] hover:bg-[#854cf4]/5 transition-all"
+                            >
+                              <Twitter className="w-4 h-4 text-[#854cf4]" />
+                              <span className="text-sm font-medium">Twitter</span>
+                            </a>
+                          )}
+                          {profile.socialMediaLinks.linkedin && (
+                            <a
+                              href={profile.socialMediaLinks.linkedin.startsWith('http') 
+                                ? profile.socialMediaLinks.linkedin 
+                                : `https://linkedin.com/in/${profile.socialMediaLinks.linkedin}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/50 hover:border-[#854cf4] hover:bg-[#854cf4]/5 transition-all"
+                            >
+                              <Linkedin className="w-4 h-4 text-[#854cf4]" />
+                              <span className="text-sm font-medium">LinkedIn</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
                   {isStudent && profile.aboutYourself && (
-                    <div className="space-y-2 pt-4 border-t">
-                      <h4 className="font-medium text-xs text-muted-foreground uppercase">About</h4>
-                      <p className="text-sm whitespace-pre-wrap">{profile.aboutYourself}</p>
+                    <>
+                      <div className="border-t border-border/50" />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">About</h4>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{profile.aboutYourself}</p>
+                      </div>
+                    </>
+                  )}
+
+                  {!isStudent && (
+                    <p className="text-sm text-muted-foreground italic">No additional information available</p>
+                  )}
+
+                  {isOwnProfile && isStudent && !profile.currentTown && !profile.phone && !profile.class && !profile.aboutYourself && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-muted-foreground mb-4">Complete your profile to help others know you better</p>
+                      <Button
+                        size="sm"
+                        onClick={() => setIsAboutEditMode(true)}
+                        className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Add Information
+                      </Button>
                     </div>
                   )}
                 </div>
