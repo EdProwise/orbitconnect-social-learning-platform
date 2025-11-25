@@ -22,11 +22,10 @@ interface LeftSidebarProps {
 
 const navigationItems = [
   { name: 'Home', href: '/feed', icon: Home },
-  { name: 'Inspiration Teacher', href: '/teachers', icon: GraduationCap },
+  { name: 'Mentorship', href: '/teachers', icon: UserCheck },
   { name: 'Meet GenZ', href: '/profiles', icon: Users },
   { name: 'Discover School', href: '/schools', icon: School },
   { name: 'Organize', href: '/organize', icon: Calendar },
-  { name: 'Mentorship', href: '/mentorship', icon: UserCheck },
   { name: 'Tutors', href: '/tutors', icon: GraduationCap },
   { name: 'Courses', href: '/courses', icon: BookOpen },
   { name: 'Saved', href: '/saved', icon: Bookmark },

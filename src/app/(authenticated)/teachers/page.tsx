@@ -54,7 +54,7 @@ export default function TeachersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-poppins">Inspiration Teacher</h1>
+          <h1 className="text-3xl font-bold font-poppins">Mentorship</h1>
           <p className="text-muted-foreground mt-2">
             Discover and connect with inspiring teachers from around the world
           </p>
