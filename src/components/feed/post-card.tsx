@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { 
   Heart, 
   MessageCircle, 
@@ -17,7 +19,13 @@ import {
   Send,
   Loader2,
   MoreVertical,
-  BookOpen
+  BookOpen,
+  FileText,
+  Image as ImageIcon,
+  HelpCircle,
+  Trophy,
+  BarChart3,
+  Gift
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/api-client';
@@ -29,7 +37,7 @@ interface Post {
   title: string;
   content: string | null;
   mediaUrls: string[] | null;
-  pollOptions: string[] | null;
+  pollOptions: any[] | null;
   fileUrls: string[] | null;
   viewCount: number;
   createdAt: string;
@@ -61,6 +69,16 @@ const reactionTypes = [
   { type: 'SUPPORT', icon: HandHeart, label: 'Support', color: 'text-green-500' },
 ];
 
+const postTypeConfig: Record<string, { action: string; icon: any; color: string }> = {
+  ARTICLE: { action: 'published an article', icon: FileText, color: 'text-blue-600' },
+  PHOTO_VIDEO: { action: 'shared photos/videos', icon: ImageIcon, color: 'text-pink-600' },
+  QUESTION: { action: 'asked a question', icon: HelpCircle, color: 'text-orange-600' },
+  CELEBRATE: { action: 'is celebrating', icon: Trophy, color: 'text-yellow-600' },
+  POLL: { action: 'started a poll', icon: BarChart3, color: 'text-purple-600' },
+  STUDY_MATERIAL: { action: 'uploaded study material', icon: BookOpen, color: 'text-green-600' },
+  DONATE_BOOKS: { action: 'is donating books', icon: Gift, color: 'text-red-600' },
+};
+
 export function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -71,11 +89,27 @@ export function PostCard({ post }: PostCardProps) {
   const [userReaction, setUserReaction] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [author, setAuthor] = useState<UserData | null>(null);
+  const [pollVotes, setPollVotes] = useState<Record<number, number>>({});
+  const [userVote, setUserVote] = useState<number | null>(null);
+  const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
     fetchAuthor();
     fetchReactions();
+    if (post.type === 'POLL' && post.pollOptions) {
+      initializePollVotes();
+    }
   }, [post.id]);
+
+  const initializePollVotes = () => {
+    if (post.pollOptions) {
+      const votes: Record<number, number> = {};
+      post.pollOptions.forEach((option: any, index: number) => {
+        votes[index] = option.votes || 0;
+      });
+      setPollVotes(votes);
+    }
+  };
 
   const fetchAuthor = async () => {
     try {
@@ -114,11 +148,14 @@ export function PostCard({ post }: PostCardProps) {
 
     setIsSubmittingComment(true);
     try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+
       const comment = await apiRequest('/api/comments', {
         method: 'POST',
         body: JSON.stringify({
           postId: post.id,
-          userId: 5, // TODO: Get from auth context
+          userId: user?.id || 5,
           content: newComment,
         }),
       });
@@ -133,11 +170,14 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleReaction = async (type: string) => {
     try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+
       await apiRequest('/api/reactions', {
         method: 'POST',
         body: JSON.stringify({
           postId: post.id,
-          userId: 5, // TODO: Get from auth context
+          userId: user?.id || 5,
           type,
         }),
       });
@@ -150,13 +190,16 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleSave = async () => {
     try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+
       if (isSaved) {
         // TODO: Unsave post
       } else {
         await apiRequest('/api/saved-posts', {
           method: 'POST',
           body: JSON.stringify({
-            userId: 5, // TODO: Get from auth context
+            userId: user?.id || 5,
             postId: post.id,
           }),
         });
@@ -165,6 +208,26 @@ export function PostCard({ post }: PostCardProps) {
     } catch (error) {
       console.error('Failed to save post:', error);
     }
+  };
+
+  const handlePollVote = (optionIndex: number) => {
+    if (hasVoted) return;
+
+    const newVotes = { ...pollVotes };
+    newVotes[optionIndex] = (newVotes[optionIndex] || 0) + 1;
+    setPollVotes(newVotes);
+    setUserVote(optionIndex);
+    setHasVoted(true);
+  };
+
+  const getTotalVotes = () => {
+    return Object.values(pollVotes).reduce((sum, votes) => sum + votes, 0);
+  };
+
+  const getVotePercentage = (optionIndex: number) => {
+    const total = getTotalVotes();
+    if (total === 0) return 0;
+    return Math.round(((pollVotes[optionIndex] || 0) / total) * 100);
   };
 
   const toggleComments = () => {
@@ -178,27 +241,33 @@ export function PostCard({ post }: PostCardProps) {
     return reactions.filter(r => r.type === type).length;
   };
 
+  const typeConfig = postTypeConfig[post.type] || postTypeConfig.ARTICLE;
+  const TypeIcon = typeConfig.icon;
+
   return (
     <Card>
       <CardContent className="p-6">
-        {/* Post Header */}
+        {/* Post Header with Type */}
         <div className="flex items-start gap-3 mb-4">
-          <Avatar className="w-12 h-12">
-            <AvatarImage src={author?.avatar || ''} alt={author?.name || 'User'} />
-            <AvatarFallback>{author?.name?.[0] || 'U'}</AvatarFallback>
-          </Avatar>
+          <Link href={`/profile/${post.userId}`}>
+            <Avatar className="w-12 h-12 cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarImage src={author?.avatar || ''} alt={author?.name || 'User'} />
+              <AvatarFallback>{author?.name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+          </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold">{author?.name || 'Loading...'}</span>
-              <Badge variant="secondary" className="text-xs">
-                {author?.role || ''}
-              </Badge>
+              <Link href={`/profile/${post.userId}`} className="hover:underline">
+                <span className="font-semibold">{author?.name || 'Loading...'}</span>
+              </Link>
+              <span className="text-sm text-muted-foreground">{typeConfig.action}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+              <TypeIcon className={`w-3 h-3 ${typeConfig.color}`} />
               <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
               <span>•</span>
-              <Badge variant="outline" className="text-xs">
-                {post.type.replace('_', ' ')}
+              <Badge variant="secondary" className="text-xs">
+                {author?.role || ''}
               </Badge>
             </div>
           </div>
@@ -211,32 +280,85 @@ export function PostCard({ post }: PostCardProps) {
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">{post.title}</h3>
           {post.content && (
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+            <>
+              {post.type === 'ARTICLE' ? (
+                <div 
+                  className="prose prose-sm max-w-none text-sm text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: post.content }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+              )}
+            </>
           )}
 
           {/* Media */}
           {post.mediaUrls && post.mediaUrls.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${post.mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {post.mediaUrls.slice(0, 4).map((url, index) => (
-                <div key={index} className="aspect-video rounded-lg overflow-hidden bg-muted">
+                <div 
+                  key={index} 
+                  className={`rounded-lg overflow-hidden bg-muted ${
+                    post.mediaUrls!.length === 1 ? 'aspect-video' : 'aspect-square'
+                  }`}
+                >
                   <img src={url} alt="" className="w-full h-full object-cover" />
                 </div>
               ))}
+              {post.mediaUrls.length > 4 && (
+                <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
+                  <span className="text-2xl font-semibold text-muted-foreground">
+                    +{post.mediaUrls.length - 4}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Poll */}
-          {post.pollOptions && post.pollOptions.length > 0 && (
-            <div className="space-y-2">
-              {post.pollOptions.map((option, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="w-full justify-start h-auto py-3"
-                >
-                  <span className="text-sm">{option}</span>
-                </Button>
-              ))}
+          {/* Poll with Voting */}
+          {post.type === 'POLL' && post.pollOptions && post.pollOptions.length > 0 && (
+            <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
+              {post.pollOptions.map((option: any, index: number) => {
+                const optionText = typeof option === 'string' ? option : option.text;
+                const percentage = getVotePercentage(index);
+                const isUserVote = userVote === index;
+
+                return (
+                  <div key={index}>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start h-auto py-3 relative overflow-hidden ${
+                        hasVoted ? 'cursor-default' : 'hover:bg-accent'
+                      } ${isUserVote ? 'border-[#854cf4] bg-[#854cf4]/5' : ''}`}
+                      onClick={() => handlePollVote(index)}
+                      disabled={hasVoted}
+                    >
+                      {hasVoted && (
+                        <div 
+                          className="absolute left-0 top-0 bottom-0 bg-[#854cf4]/10 transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      )}
+                      <div className="flex items-center justify-between w-full relative z-10">
+                        <span className="text-sm font-medium">{optionText}</span>
+                        {hasVoted && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold">{percentage}%</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({pollVotes[index] || 0} {pollVotes[index] === 1 ? 'vote' : 'votes'})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </Button>
+                  </div>
+                );
+              })}
+              {hasVoted && (
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  {getTotalVotes()} total {getTotalVotes() === 1 ? 'vote' : 'votes'}
+                </p>
+              )}
             </div>
           )}
 
@@ -251,8 +373,8 @@ export function PostCard({ post }: PostCardProps) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 p-3 rounded-lg border border-border hover:bg-accent transition-colors"
                 >
-                  <BookOpen className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm flex-1 truncate">{url.split('/').pop()}</span>
+                  <BookOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm flex-1 truncate">{url.split('/').pop() || 'Download file'}</span>
                 </a>
               ))}
             </div>
@@ -411,11 +533,14 @@ function CommentItem({ comment, postId }: { comment: Comment; postId: number }) 
 
     setIsSubmitting(true);
     try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+
       const reply = await apiRequest('/api/comments', {
         method: 'POST',
         body: JSON.stringify({
           postId,
-          userId: 5, // TODO: Get from auth context
+          userId: user?.id || 5,
           content: replyText,
           parentCommentId: comment.id,
         }),
@@ -433,14 +558,18 @@ function CommentItem({ comment, postId }: { comment: Comment; postId: number }) 
   return (
     <div className="space-y-3">
       <div className="flex gap-3">
-        <Avatar className="w-8 h-8">
-          <AvatarImage src={author?.avatar || ''} alt={author?.name || 'User'} />
-          <AvatarFallback>{author?.name?.[0] || 'U'}</AvatarFallback>
-        </Avatar>
+        <Link href={`/profile/${comment.userId}`}>
+          <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity">
+            <AvatarImage src={author?.avatar || ''} alt={author?.name || 'User'} />
+            <AvatarFallback>{author?.name?.[0] || 'U'}</AvatarFallback>
+          </Avatar>
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="bg-muted rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-sm">{author?.name || 'Loading...'}</span>
+              <Link href={`/profile/${comment.userId}`} className="hover:underline">
+                <span className="font-semibold text-sm">{author?.name || 'Loading...'}</span>
+              </Link>
               <Badge variant="secondary" className="text-xs">
                 {author?.role || ''}
               </Badge>
