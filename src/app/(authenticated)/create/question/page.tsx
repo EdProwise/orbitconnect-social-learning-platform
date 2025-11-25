@@ -7,21 +7,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, HelpCircle, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function CreateQuestionPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [mediaUrls, setMediaUrls] = useState<string[]>(['']);
+  const [previews, setPreviews] = useState<string[]>(['']);
+
+  const addMediaUrl = () => {
+    setMediaUrls([...mediaUrls, '']);
+    setPreviews([...previews, '']);
+  };
+
+  const updateMediaUrl = (index: number, url: string) => {
+    const newUrls = [...mediaUrls];
+    newUrls[index] = url;
+    setMediaUrls(newUrls);
+
+    const newPreviews = [...previews];
+    newPreviews[index] = url;
+    setPreviews(newPreviews);
+  };
+
+  const removeMediaUrl = (index: number) => {
+    setMediaUrls(mediaUrls.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter your question');
+      toast.error('Please enter your question');
       return;
     }
 
@@ -32,10 +55,12 @@ export default function CreateQuestionPage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to ask a question');
+        toast.error('Please log in to ask a question');
         router.push('/login');
         return;
       }
+
+      const validUrls = mediaUrls.filter(url => url.trim());
 
       const postData: any = {
         userId: user.id,
@@ -44,15 +69,20 @@ export default function CreateQuestionPage() {
         content: content.trim() || null,
       };
 
+      if (validUrls.length > 0) {
+        postData.mediaUrls = validUrls;
+      }
+
       await apiRequest('/api/posts', {
         method: 'POST',
         body: JSON.stringify(postData),
       });
 
+      toast.success('Question posted successfully!');
       router.push('/feed');
     } catch (error) {
-      console.error('Failed to post question:', error);
-      alert('Failed to post question. Please try again.');
+      console.error('Failed to create question:', error);
+      toast.error('Failed to post question. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +107,7 @@ export default function CreateQuestionPage() {
               Ask a Question
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Get answers from the community
+              Get help from the community
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -89,26 +119,71 @@ export default function CreateQuestionPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
-                className="text-base"
               />
-              <p className="text-xs text-muted-foreground">
-                Be specific and imagine you're asking a question to another person
-              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">Details (Optional)</Label>
+              <Label htmlFor="content">Additional Details (Optional)</Label>
               <Textarea
                 id="content"
                 placeholder="Provide more context or details about your question..."
-                rows={6}
+                rows={4}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 disabled={isSubmitting}
               />
-              <p className="text-xs text-muted-foreground">
-                Include all the information someone would need to answer your question
-              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Add Images/Videos (Optional)</Label>
+              {mediaUrls.map((url, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter image or video URL..."
+                      value={url}
+                      onChange={(e) => updateMediaUrl(index, e.target.value)}
+                      disabled={isSubmitting}
+                    />
+                    {mediaUrls.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeMediaUrl(index)}
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {previews[index] && (
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                      <img
+                        src={previews[index]}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                          const newPreviews = [...previews];
+                          newPreviews[index] = '';
+                          setPreviews(newPreviews);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addMediaUrl}
+                disabled={isSubmitting}
+                className="w-full"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Add Another Media
+              </Button>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

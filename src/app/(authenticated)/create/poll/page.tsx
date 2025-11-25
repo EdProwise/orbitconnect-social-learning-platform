@@ -6,45 +6,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, X, Plus, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, X, BarChart3, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function CreatePollPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [options, setOptions] = useState(['', '']);
+  const [mediaUrls, setMediaUrls] = useState<string[]>(['']);
+  const [previews, setPreviews] = useState<string[]>(['']);
 
   const addOption = () => {
-    setPollOptions([...pollOptions, '']);
+    if (options.length < 6) {
+      setOptions([...options, '']);
+    }
   };
 
   const updateOption = (index: number, value: string) => {
-    const newOptions = [...pollOptions];
+    const newOptions = [...options];
     newOptions[index] = value;
-    setPollOptions(newOptions);
+    setOptions(newOptions);
   };
 
   const removeOption = (index: number) => {
-    if (pollOptions.length > 2) {
-      setPollOptions(pollOptions.filter((_, i) => i !== index));
+    if (options.length > 2) {
+      setOptions(options.filter((_, i) => i !== index));
     }
+  };
+
+  const addMediaUrl = () => {
+    setMediaUrls([...mediaUrls, '']);
+    setPreviews([...previews, '']);
+  };
+
+  const updateMediaUrl = (index: number, url: string) => {
+    const newUrls = [...mediaUrls];
+    newUrls[index] = url;
+    setMediaUrls(newUrls);
+
+    const newPreviews = [...previews];
+    newPreviews[index] = url;
+    setPreviews(newPreviews);
+  };
+
+  const removeMediaUrl = (index: number) => {
+    setMediaUrls(mediaUrls.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter a poll question');
+      toast.error('Please enter a poll question');
       return;
     }
 
-    const validOptions = pollOptions.filter(opt => opt.trim());
+    const validOptions = options.filter(opt => opt.trim());
     if (validOptions.length < 2) {
-      alert('Please provide at least 2 poll options');
+      toast.error('Please provide at least 2 options');
       return;
     }
 
@@ -55,28 +78,34 @@ export default function CreatePollPage() {
       const user = userStr ? JSON.parse(userStr) : null;
 
       if (!user) {
-        alert('Please log in to create a poll');
+        toast.error('Please log in to create a poll');
         router.push('/login');
         return;
       }
+
+      const validUrls = mediaUrls.filter(url => url.trim());
 
       const postData: any = {
         userId: user.id,
         type: 'POLL',
         title: title.trim(),
-        content: content.trim() || null,
         pollOptions: validOptions.map(opt => ({ text: opt, votes: 0 })),
       };
+
+      if (validUrls.length > 0) {
+        postData.mediaUrls = validUrls;
+      }
 
       await apiRequest('/api/posts', {
         method: 'POST',
         body: JSON.stringify(postData),
       });
 
+      toast.success('Poll created successfully!');
       router.push('/feed');
     } catch (error) {
       console.error('Failed to create poll:', error);
-      alert('Failed to create poll. Please try again.');
+      toast.error('Failed to create poll. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -101,7 +130,7 @@ export default function CreatePollPage() {
               Create a Poll
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Get opinions from your network
+              Get opinions from the community
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -109,28 +138,16 @@ export default function CreatePollPage() {
               <Label htmlFor="title">Poll Question *</Label>
               <Input
                 id="title"
-                placeholder="What would you like to ask?"
+                placeholder="Ask a question..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="content">Description (Optional)</Label>
-              <Textarea
-                id="content"
-                placeholder="Add context or details about your poll..."
-                rows={3}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
             <div className="space-y-3">
-              <Label>Poll Options *</Label>
-              {pollOptions.map((option, index) => (
+              <Label>Poll Options * (2-6 options)</Label>
+              {options.map((option, index) => (
                 <div key={index} className="flex gap-2">
                   <Input
                     placeholder={`Option ${index + 1}`}
@@ -138,7 +155,7 @@ export default function CreatePollPage() {
                     onChange={(e) => updateOption(index, e.target.value)}
                     disabled={isSubmitting}
                   />
-                  {pollOptions.length > 2 && (
+                  {options.length > 2 && (
                     <Button
                       type="button"
                       variant="outline"
@@ -151,20 +168,71 @@ export default function CreatePollPage() {
                   )}
                 </div>
               ))}
+              {options.length < 6 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addOption}
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Option
+                </Button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <Label>Add Images/Videos (Optional)</Label>
+              {mediaUrls.map((url, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter image or video URL..."
+                      value={url}
+                      onChange={(e) => updateMediaUrl(index, e.target.value)}
+                      disabled={isSubmitting}
+                    />
+                    {mediaUrls.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeMediaUrl(index)}
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {previews[index] && (
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                      <img
+                        src={previews[index]}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                          const newPreviews = [...previews];
+                          newPreviews[index] = '';
+                          setPreviews(newPreviews);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addOption}
-                disabled={isSubmitting || pollOptions.length >= 6}
+                onClick={addMediaUrl}
+                disabled={isSubmitting}
                 className="w-full"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Option
+                <Upload className="w-4 h-4 mr-2" />
+                Add Media
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Add 2-6 options for people to vote on
-              </p>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
@@ -178,13 +246,13 @@ export default function CreatePollPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !title.trim() || pollOptions.filter(o => o.trim()).length < 2}
+                disabled={isSubmitting || !title.trim() || options.filter(opt => opt.trim()).length < 2}
                 className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Poll...
+                    Creating...
                   </>
                 ) : (
                   'Create Poll'
