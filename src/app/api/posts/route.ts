@@ -5,6 +5,17 @@ import { eq, like, and, or, desc, sql } from 'drizzle-orm';
 
 const VALID_POST_TYPES = ['ARTICLE', 'PHOTO_VIDEO', 'QUESTION', 'CELEBRATE', 'POLL', 'STUDY_MATERIAL', 'DONATE_BOOKS'];
 
+// Helper function to safely parse JSON fields
+function safeJsonParse(value: string | null): any {
+  if (!value) return null;
+  try {
+    return JSON.parse(value as string);
+  } catch (error) {
+    console.error('Invalid JSON data:', value);
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -43,12 +54,12 @@ export async function GET(request: NextRequest) {
 
       const postData = updatedPost[0];
       
-      // Parse JSON fields
+      // Parse JSON fields safely
       return NextResponse.json({
         ...postData,
-        mediaUrls: postData.mediaUrls ? JSON.parse(postData.mediaUrls as string) : null,
-        pollOptions: postData.pollOptions ? JSON.parse(postData.pollOptions as string) : null,
-        fileUrls: postData.fileUrls ? JSON.parse(postData.fileUrls as string) : null,
+        mediaUrls: safeJsonParse(postData.mediaUrls as string),
+        pollOptions: safeJsonParse(postData.pollOptions as string),
+        fileUrls: safeJsonParse(postData.fileUrls as string),
       });
     }
 
@@ -118,12 +129,12 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    // Parse JSON fields for all posts
+    // Parse JSON fields for all posts safely
     const parsedResults = results.map(post => ({
       ...post,
-      mediaUrls: post.mediaUrls ? JSON.parse(post.mediaUrls as string) : null,
-      pollOptions: post.pollOptions ? JSON.parse(post.pollOptions as string) : null,
-      fileUrls: post.fileUrls ? JSON.parse(post.fileUrls as string) : null,
+      mediaUrls: safeJsonParse(post.mediaUrls as string),
+      pollOptions: safeJsonParse(post.pollOptions as string),
+      fileUrls: safeJsonParse(post.fileUrls as string),
     }));
 
     return NextResponse.json(parsedResults);
