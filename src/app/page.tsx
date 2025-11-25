@@ -9,12 +9,12 @@ export default function LandingPage() {
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-[#854cf4] flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold font-poppins">OrbitConnect</span>
-            </div>
+            </Link>
             <nav className="hidden md:flex items-center gap-8">
               <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Features

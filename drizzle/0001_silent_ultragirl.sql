@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `cover_image` text;

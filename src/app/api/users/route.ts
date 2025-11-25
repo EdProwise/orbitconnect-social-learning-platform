@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
         email: users.email,
         name: users.name,
         avatar: users.avatar,
+        coverImage: users.coverImage,
         role: users.role,
         bio: users.bio,
         schoolId: users.schoolId,
@@ -95,6 +96,7 @@ export async function GET(request: NextRequest) {
       email: users.email,
       name: users.name,
       avatar: users.avatar,
+      coverImage: users.coverImage,
       role: users.role,
       bio: users.bio,
       schoolId: users.schoolId,
@@ -120,7 +122,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, role, passwordHash, avatar, bio, schoolId } = body;
+    const { email, name, role, passwordHash, avatar, coverImage, bio, schoolId } = body;
 
     // Validate required fields
     if (!email) {
@@ -192,6 +194,7 @@ export async function POST(request: NextRequest) {
         passwordHash,
         name: sanitizedName,
         avatar: avatar || null,
+        coverImage: coverImage || null,
         role,
         bio: bio || null,
         schoolId: schoolId ? parseInt(schoolId) : null,
@@ -203,6 +206,7 @@ export async function POST(request: NextRequest) {
         email: users.email,
         name: users.name,
         avatar: users.avatar,
+        coverImage: users.coverImage,
         role: users.role,
         bio: users.bio,
         schoolId: users.schoolId,
@@ -243,7 +247,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, name, role, passwordHash, avatar, bio, schoolId } = body;
+    const { email, name, role, passwordHash, avatar, coverImage, bio, schoolId } = body;
 
     // Validate role if provided
     if (role && !VALID_ROLES.includes(role)) {
@@ -287,6 +291,7 @@ export async function PUT(request: NextRequest) {
     if (role !== undefined) updates.role = role;
     if (passwordHash !== undefined) updates.passwordHash = passwordHash;
     if (avatar !== undefined) updates.avatar = avatar;
+    if (coverImage !== undefined) updates.coverImage = coverImage;
     if (bio !== undefined) updates.bio = bio;
     if (schoolId !== undefined) updates.schoolId = schoolId ? parseInt(schoolId) : null;
 
@@ -298,6 +303,7 @@ export async function PUT(request: NextRequest) {
         email: users.email,
         name: users.name,
         avatar: users.avatar,
+        coverImage: users.coverImage,
         role: users.role,
         bio: users.bio,
         schoolId: users.schoolId,
@@ -333,6 +339,7 @@ export async function DELETE(request: NextRequest) {
       email: users.email,
       name: users.name,
       avatar: users.avatar,
+      coverImage: users.coverImage,
       role: users.role,
       bio: users.bio,
       schoolId: users.schoolId,

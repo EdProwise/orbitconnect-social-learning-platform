@@ -46,6 +46,13 @@ export function TopNav({ user }: TopNavProps) {
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -67,7 +74,7 @@ export function TopNav({ user }: TopNavProps) {
         </Link>
 
         {/* Search */}
-        <div className="flex-1 max-w-lg">
+        <form onSubmit={handleSearch} className="flex-1 max-w-lg">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -78,7 +85,7 @@ export function TopNav({ user }: TopNavProps) {
               className="pl-9 h-9"
             />
           </div>
-        </div>
+        </form>
 
         {/* Actions */}
         <div className="flex items-center gap-2">

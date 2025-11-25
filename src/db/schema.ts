@@ -24,6 +24,7 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   name: text('name').notNull(),
   avatar: text('avatar'),
+  coverImage: text('cover_image'),
   role: text('role').notNull(), // 'STUDENT'|'TEACHER'|'SCHOOL'|'ADMIN'
   bio: text('bio'),
   schoolId: integer('school_id').references(() => schools.id),

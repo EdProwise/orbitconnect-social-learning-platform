@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { PostCard } from '@/components/feed/post-card';
 import {
   UserPlus,
@@ -17,9 +20,14 @@ import {
   School as SchoolIcon,
   Mail,
   Loader2,
+  Camera,
+  Edit2,
+  Save,
+  X,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface UserProfile {
   id: number;
@@ -27,6 +35,7 @@ interface UserProfile {
   email: string;
   role: string;
   avatar: string | null;
+  coverImage: string | null;
   bio: string | null;
   schoolId: number | null;
   createdAt: string;
@@ -42,6 +51,15 @@ export default function ProfilePage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', bio: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState<'avatar' | 'cover' | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+
+  // Get current user
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+  const isOwnProfile = currentUser.userId === parseInt(userId);
 
   useEffect(() => {
     if (userId) {
@@ -59,6 +77,7 @@ export default function ProfilePage() {
       ]);
 
       setProfile(profileData);
+      setEditForm({ name: profileData.name, bio: profileData.bio || '' });
       setPosts(postsData);
       setConnections(connectionsData);
 
@@ -69,6 +88,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
+      toast.error('Failed to load profile');
     } finally {
       setIsLoading(false);
     }
@@ -79,13 +99,54 @@ export default function ProfilePage() {
       await apiRequest('/api/connections', {
         method: 'POST',
         body: JSON.stringify({
-          requesterId: 5, // TODO: Get from auth context
+          requesterId: currentUser.userId,
           receiverId: parseInt(userId),
         }),
       });
-      alert('Connection request sent!');
+      toast.success('Connection request sent!');
     } catch (error) {
       console.error('Failed to send connection request:', error);
+      toast.error('Failed to send connection request');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setIsSaving(true);
+      const updated = await apiRequest(`/api/users?id=${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(editForm),
+      });
+      setProfile(updated);
+      setIsEditMode(false);
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!imageUrl.trim()) {
+      toast.error('Please enter an image URL');
+      return;
+    }
+
+    try {
+      const field = showImageUpload === 'avatar' ? 'avatar' : 'coverImage';
+      const updated = await apiRequest(`/api/users?id=${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ [field]: imageUrl.trim() }),
+      });
+      setProfile(updated);
+      setShowImageUpload(null);
+      setImageUrl('');
+      toast.success(`${showImageUpload === 'avatar' ? 'Profile' : 'Cover'} image updated!`);
+    } catch (error) {
+      console.error('Failed to update image:', error);
+      toast.error('Failed to update image');
     }
   };
 
@@ -105,18 +166,53 @@ export default function ProfilePage() {
     <div className="space-y-6">
       {/* Cover Image */}
       <Card>
-        <div className="h-48 bg-gradient-to-br from-[#854cf4] to-[#6b3cc9] rounded-t-xl" />
+        <div className="relative h-48 bg-gradient-to-br from-[#854cf4] to-[#6b3cc9] rounded-t-xl overflow-hidden">
+          {profile.coverImage && (
+            <img src={profile.coverImage} alt="Cover" className="w-full h-full object-cover" />
+          )}
+          {isOwnProfile && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="absolute top-4 right-4"
+              onClick={() => setShowImageUpload('cover')}
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Edit Cover
+            </Button>
+          )}
+        </div>
         <CardContent className="relative pt-0 pb-6">
           {/* Avatar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-16 mb-6">
-            <Avatar className="w-32 h-32 border-4 border-card">
-              <AvatarImage src={profile.avatar || ''} alt={profile.name} />
-              <AvatarFallback className="text-2xl">{profile.name[0]}</AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="w-32 h-32 border-4 border-card">
+                <AvatarImage src={profile.avatar || ''} alt={profile.name} />
+                <AvatarFallback className="text-2xl">{profile.name[0]}</AvatarFallback>
+              </Avatar>
+              {isOwnProfile && (
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute bottom-0 right-0 rounded-full w-10 h-10"
+                  onClick={() => setShowImageUpload('avatar')}
+                >
+                  <Camera className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold font-poppins">{profile.name}</h1>
+                  {isEditMode ? (
+                    <Input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="text-2xl font-bold font-poppins mb-2"
+                    />
+                  ) : (
+                    <h1 className="text-2xl font-bold font-poppins">{profile.name}</h1>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="secondary">{profile.role}</Badge>
                     {school && (
@@ -128,26 +224,77 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    onClick={handleConnect}
-                    className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Connect
-                  </Button>
-                  <Button variant="outline">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Message
-                  </Button>
+                  {isOwnProfile ? (
+                    <>
+                      {isEditMode ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditMode(false);
+                              setEditForm({ name: profile.name, bio: profile.bio || '' });
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleSaveProfile}
+                            disabled={isSaving}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            {isSaving ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4 mr-2" />
+                            )}
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          onClick={() => setIsEditMode(true)}
+                          className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                        >
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Edit Profile
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        onClick={handleConnect}
+                        className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Connect
+                      </Button>
+                      <Button variant="outline">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Message
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Bio */}
-          {profile.bio && (
+          {isEditMode ? (
+            <Textarea
+              value={editForm.bio}
+              onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+              placeholder="Write a bio..."
+              className="mb-4"
+              rows={3}
+            />
+          ) : profile.bio ? (
             <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>
-          )}
+          ) : isOwnProfile ? (
+            <p className="text-sm text-muted-foreground mb-4 italic">Add a bio to tell people about yourself</p>
+          ) : null}
 
           {/* Stats */}
           <div className="flex gap-6 text-sm">
@@ -240,6 +387,59 @@ export default function ProfilePage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={showImageUpload !== null} onOpenChange={() => setShowImageUpload(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Update {showImageUpload === 'avatar' ? 'Profile' : 'Cover'} Image
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Image URL</label>
+              <Input
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Enter a direct URL to an image
+              </p>
+            </div>
+            {imageUrl && (
+              <div className="border rounded-lg p-4">
+                <p className="text-sm font-medium mb-2">Preview:</p>
+                <img 
+                  src={imageUrl} 
+                  alt="Preview" 
+                  className={showImageUpload === 'avatar' ? 'w-32 h-32 rounded-full object-cover' : 'w-full h-48 rounded-lg object-cover'}
+                  onError={(e) => {
+                    e.currentTarget.src = '';
+                    e.currentTarget.alt = 'Invalid image URL';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowImageUpload(null);
+              setImageUrl('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleImageUpload}
+              className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+            >
+              Update Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
