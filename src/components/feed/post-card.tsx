@@ -114,7 +114,6 @@ export function PostCard({ post }: PostCardProps) {
   const [knowledgePoints, setKnowledgePoints] = useState(0);
   const [userKnowledgePoints, setUserKnowledgePoints] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
-  const [showFullArticle, setShowFullArticle] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
 
@@ -513,43 +512,19 @@ export function PostCard({ post }: PostCardProps) {
             </div>
           ) : (
             <>
-              <h2 className="text-3xl font-bold font-poppins mb-4 leading-tight">
+              <h2 className="text-3xl font-bold font-poppins mb-6 leading-tight">
                 {post.title}
               </h2>
               
-              {post.content && (
-                <>
-                  {showFullArticle ? (
-                    <div 
-                      className="prose prose-lg max-w-none mb-6"
-                      dangerouslySetInnerHTML={{ __html: post.content }}
-                    />
-                  ) : (
-                    <>
-                      <p className="text-base text-muted-foreground mb-6 leading-relaxed">
-                        {extractTextFromHtml(post.content, 300)}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10 p-0 h-auto font-semibold"
-                        onClick={() => setShowFullArticle(true)}
-                      >
-                        Read full article
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </>
-                  )}
-                  {showFullArticle && (
-                    <Button
-                      variant="ghost"
-                      className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10 p-0 h-auto font-semibold mt-4"
-                      onClick={() => setShowFullArticle(false)}
-                    >
-                      Show less
-                    </Button>
-                  )}
-                </>
-              )}
+              <Link href={`/article/${post.id}`}>
+                <Button
+                  variant="ghost"
+                  className="text-[#854cf4] hover:text-[#7743e0] hover:bg-[#854cf4]/10 p-0 h-auto font-semibold mb-6"
+                >
+                  Read full article
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
             </>
           )}
 
