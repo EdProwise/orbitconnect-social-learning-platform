@@ -1,0 +1,147 @@
+import { db } from '@/db';
+import { posts } from '@/db/schema';
+
+async function main() {
+    const now = new Date();
+    
+    const samplePosts = [
+        {
+            type: 'ARTICLE',
+            title: '5 Tips for Effective Online Learning',
+            content: 'Online learning has become essential. Here are my top 5 tips: 1) Create a dedicated study space, 2) Set a regular schedule, 3) Minimize distractions, 4) Engage actively with content, 5) Connect with peers regularly.',
+            userId: 2,
+            schoolId: 1,
+            mediaUrls: null,
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 142,
+            createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'PHOTO_VIDEO',
+            title: 'Our Science Fair Project',
+            content: 'Check out our renewable energy model! Won second place! 🔬⚡',
+            userId: 5,
+            schoolId: 1,
+            mediaUrls: JSON.stringify(['https://picsum.photos/seed/sciencefair/800/600', 'https://picsum.photos/seed/sciencefair2/800/600']),
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 89,
+            createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'QUESTION',
+            title: 'How do I solve quadratic equations?',
+            content: "I'm struggling with the quadratic formula. Can someone explain when to use factoring vs the formula?",
+            userId: 6,
+            schoolId: 2,
+            mediaUrls: null,
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 67,
+            createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'CELEBRATE',
+            title: 'Just won the Regional Debate Championship! 🏆',
+            content: 'After months of preparation, our team secured first place at the Regional Debate Championship! Grateful for my coach and teammates. #DebateChampions',
+            userId: 7,
+            schoolId: 3,
+            mediaUrls: JSON.stringify(['https://picsum.photos/seed/debate/800/600']),
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 234,
+            createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'POLL',
+            title: 'Which programming language should we start with?',
+            content: "I'm planning the intro programming course. Vote for which language we should teach first!",
+            userId: 3,
+            schoolId: 2,
+            mediaUrls: null,
+            pollOptions: JSON.stringify(['Python', 'JavaScript', 'Java', 'C++']),
+            fileUrls: null,
+            viewCount: 178,
+            createdAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'STUDY_MATERIAL',
+            title: 'Chemistry Notes - Chapter 5: Chemical Reactions',
+            content: 'Complete notes covering chemical reactions, balancing equations, and reaction types. PDF includes practice problems with solutions.',
+            userId: 4,
+            schoolId: 3,
+            mediaUrls: null,
+            pollOptions: null,
+            fileUrls: JSON.stringify(['https://example.com/files/chem-chapter5.pdf', 'https://example.com/files/practice-problems.pdf']),
+            viewCount: 156,
+            createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'DONATE_BOOKS',
+            title: 'Donating my Grade 10 textbooks',
+            content: 'I have Math, Science, and English textbooks from Grade 10 in excellent condition. Free for anyone who needs them! Message me to arrange pickup.',
+            userId: 8,
+            schoolId: 1,
+            mediaUrls: JSON.stringify(['https://picsum.photos/seed/books/600/400']),
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 45,
+            createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'ARTICLE',
+            title: 'Understanding Machine Learning Basics',
+            content: 'Machine Learning is transforming technology. This article breaks down the fundamentals: supervised learning, unsupervised learning, and neural networks. Perfect introduction for beginners!',
+            userId: 3,
+            schoolId: 2,
+            mediaUrls: null,
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 203,
+            createdAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'QUESTION',
+            title: 'Best resources for SAT prep?',
+            content: "Taking the SAT in 3 months. What are the best study resources and practice tests you'd recommend?",
+            userId: 5,
+            schoolId: 1,
+            mediaUrls: null,
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 92,
+            createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            type: 'CELEBRATE',
+            title: 'Got accepted into the Science Club! 🔬',
+            content: "Excited to announce I've been accepted into the Science Club! Looking forward to working on amazing projects this year.",
+            userId: 6,
+            schoolId: 2,
+            mediaUrls: null,
+            pollOptions: null,
+            fileUrls: null,
+            viewCount: 78,
+            createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+    ];
+
+    await db.insert(posts).values(samplePosts);
+    
+    console.log('✅ Posts seeder completed successfully');
+}
+
+main().catch((error) => {
+    console.error('❌ Seeder failed:', error);
+});
