@@ -702,11 +702,11 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">
-                            Studied at <span className="font-semibold">{profile.schoolHistory[0].schoolName}</span>
+                            Studied at <span className="font-semibold">{profile.schoolHistory[profile.schoolHistory.length - 1].schoolName}</span>
                           </p>
-                          {(profile.schoolHistory[0].from || profile.schoolHistory[0].to) && (
+                          {(profile.schoolHistory[profile.schoolHistory.length - 1].from || profile.schoolHistory[profile.schoolHistory.length - 1].to) && (
                             <p className="text-sm text-muted-foreground mt-0.5">
-                              Attended from {profile.schoolHistory[0].from || '—'} to {profile.schoolHistory[0].to || 'Present'}
+                              Attended from {profile.schoolHistory[profile.schoolHistory.length - 1].from || '—'} to {profile.schoolHistory[profile.schoolHistory.length - 1].to || 'Present'}
                             </p>
                           )}
                         </div>
