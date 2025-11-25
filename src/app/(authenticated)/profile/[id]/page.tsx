@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -671,7 +672,13 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">
-                            {profile.role === 'STUDENT' ? 'Student' : profile.role} at <span className="font-semibold">{school.name}</span>
+                            {profile.role === 'STUDENT' ? 'Student' : profile.role} at{' '}
+                            <Link 
+                              href={`/schools/${school.slug}`}
+                              className="font-semibold text-[#854cf4] hover:underline"
+                            >
+                              {school.name}
+                            </Link>
                           </p>
                           {profile.class && (
                             <p className="text-sm text-muted-foreground mt-0.5">Current: {profile.class}</p>
@@ -865,7 +872,12 @@ export default function ProfilePage() {
                               <SchoolIcon className="w-5 h-5 text-[#854cf4]" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-semibold">{school.name}</p>
+                              <Link 
+                                href={`/schools/${school.slug}`}
+                                className="text-sm font-semibold text-[#854cf4] hover:underline"
+                              >
+                                {school.name}
+                              </Link>
                               {profile.class && (
                                 <p className="text-sm text-muted-foreground mt-0.5">{profile.class}</p>
                               )}
