@@ -41,6 +41,10 @@ import {
   Sparkles,
   Globe,
   MoreHorizontal,
+  Award,
+  BookOpen,
+  UserCheck,
+  UserMinus,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
@@ -62,6 +66,9 @@ interface UserProfile {
   class?: string | null;
   schoolHistory?: Array<{ schoolName: string; from: string; to: string }> | null;
   aboutYourself?: string | null;
+  teachingExperience?: Array<{ schoolName: string; designation: string; teachingLevel: string; from: string; to: string }> | null;
+  skills?: string[] | null;
+  teachingSubjects?: string[] | null;
 }
 
 export default function ProfilePage() {
@@ -74,6 +81,8 @@ export default function ProfilePage() {
   const [school, setSchool] = useState<any>(null);
   const [schools, setSchools] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [aboutActiveSection, setAboutActiveSection] = useState('overview');
@@ -98,6 +107,9 @@ export default function ProfilePage() {
     class: '',
     schoolHistory: [{ schoolName: '', from: '', to: '' }],
     aboutYourself: '',
+    teachingExperience: [{ schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+    skills: [''],
+    teachingSubjects: [''],
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState<'avatar' | 'cover' | null>(null);
@@ -107,13 +119,17 @@ export default function ProfilePage() {
   // Get current user
   const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
   const isOwnProfile = currentUser.id === parseInt(userId);
+  const isTeacher = profile?.role === 'TEACHER';
 
   useEffect(() => {
     if (userId) {
       fetchProfile();
       fetchSchools();
+      if (profile?.role === 'TEACHER') {
+        fetchFollowStats();
+      }
     }
-  }, [userId]);
+  }, [userId, profile?.role]);
 
   const fetchSchools = async () => {
     try {
@@ -121,6 +137,19 @@ export default function ProfilePage() {
       setSchools(schoolsData);
     } catch (error) {
       console.error('Failed to fetch schools:', error);
+    }
+  };
+
+  const fetchFollowStats = async () => {
+    try {
+      const [followersData, followStatusData] = await Promise.all([
+        apiRequest(`/api/follows?followingId=${userId}`, { method: 'GET' }),
+        !isOwnProfile ? apiRequest(`/api/follows/status?followerId=${currentUser.id}&followingId=${userId}`, { method: 'GET' }) : Promise.resolve({ isFollowing: false }),
+      ]);
+      setFollowerCount(followersData.length || 0);
+      setIsFollowing(followStatusData.isFollowing || false);
+    } catch (error) {
+      console.error('Failed to fetch follow stats:', error);
     }
   };
 
@@ -153,6 +182,9 @@ export default function ProfilePage() {
         class: profileData.class || '',
         schoolHistory: profileData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
         aboutYourself: profileData.aboutYourself || '',
+        teachingExperience: profileData.teachingExperience || [{ schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+        skills: profileData.skills || [''],
+        teachingSubjects: profileData.teachingSubjects || [''],
       });
       setPosts(postsData);
       setConnections(connectionsData);
@@ -183,6 +215,33 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Failed to send connection request:', error);
       toast.error('Failed to send connection request');
+    }
+  };
+
+  const handleFollow = async () => {
+    try {
+      if (isFollowing) {
+        await apiRequest(`/api/follows?followerId=${currentUser.id}&followingId=${userId}`, {
+          method: 'DELETE',
+        });
+        setIsFollowing(false);
+        setFollowerCount(prev => prev - 1);
+        toast.success('Unfollowed teacher');
+      } else {
+        await apiRequest('/api/follows', {
+          method: 'POST',
+          body: JSON.stringify({
+            followerId: currentUser.id,
+            followingId: parseInt(userId),
+          }),
+        });
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1);
+        toast.success('Following teacher');
+      }
+    } catch (error) {
+      console.error('Failed to follow/unfollow:', error);
+      toast.error('Failed to update follow status');
     }
   };
 
@@ -225,15 +284,46 @@ export default function ProfilePage() {
 
     try {
       setIsSaving(true);
-      const updated = await apiRequest(`/api/users?id=${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify(aboutEditForm),
-      });
-      setProfile(updated);
+      
+      // For teachers, use PATCH to update teacher-specific fields
+      if (isTeacher) {
+        // Update basic fields with PUT
+        await apiRequest(`/api/users?id=${userId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            schoolId: aboutEditForm.schoolId,
+            currentTown: aboutEditForm.currentTown,
+            phone: aboutEditForm.phone,
+            socialMediaLinks: aboutEditForm.socialMediaLinks,
+            aboutYourself: aboutEditForm.aboutYourself,
+          }),
+        });
+        
+        // Update teacher-specific fields with PATCH
+        const cleanedTeachingExperience = aboutEditForm.teachingExperience.filter(exp => exp.schoolName && exp.designation && exp.teachingLevel);
+        const cleanedSkills = aboutEditForm.skills.filter(skill => skill.trim() !== '');
+        const cleanedSubjects = aboutEditForm.teachingSubjects.filter(subject => subject.trim() !== '');
+        
+        await apiRequest(`/api/users?id=${userId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            teachingExperience: cleanedTeachingExperience.length > 0 ? cleanedTeachingExperience : null,
+            skills: cleanedSkills.length > 0 ? cleanedSkills : null,
+            teachingSubjects: cleanedSubjects.length > 0 ? cleanedSubjects : null,
+          }),
+        });
+      } else {
+        // For students, use PUT
+        await apiRequest(`/api/users?id=${userId}`, {
+          method: 'PUT',
+          body: JSON.stringify(aboutEditForm),
+        });
+      }
+      
       setIsAboutEditMode(false);
       toast.success('About section updated successfully!');
       
-      // Refetch to update school info
+      // Refetch to update profile data
       await fetchProfile();
     } catch (error) {
       console.error('Failed to update about section:', error);
@@ -332,6 +422,61 @@ export default function ProfilePage() {
     const newHistory = [...aboutEditForm.schoolHistory];
     newHistory[index] = { ...newHistory[index], [field]: value };
     setAboutEditForm({ ...aboutEditForm, schoolHistory: newHistory });
+  };
+
+  // Teacher-specific helper functions
+  const addTeachingExperience = () => {
+    setAboutEditForm({
+      ...aboutEditForm,
+      teachingExperience: [...aboutEditForm.teachingExperience, { schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+    });
+  };
+
+  const removeTeachingExperience = (index: number) => {
+    const newExperience = aboutEditForm.teachingExperience.filter((_, i) => i !== index);
+    setAboutEditForm({ ...aboutEditForm, teachingExperience: newExperience });
+  };
+
+  const updateTeachingExperience = (index: number, field: string, value: string) => {
+    const newExperience = [...aboutEditForm.teachingExperience];
+    newExperience[index] = { ...newExperience[index], [field]: value };
+    setAboutEditForm({ ...aboutEditForm, teachingExperience: newExperience });
+  };
+
+  const addSkill = () => {
+    setAboutEditForm({
+      ...aboutEditForm,
+      skills: [...aboutEditForm.skills, ''],
+    });
+  };
+
+  const removeSkill = (index: number) => {
+    const newSkills = aboutEditForm.skills.filter((_, i) => i !== index);
+    setAboutEditForm({ ...aboutEditForm, skills: newSkills });
+  };
+
+  const updateSkill = (index: number, value: string) => {
+    const newSkills = [...aboutEditForm.skills];
+    newSkills[index] = value;
+    setAboutEditForm({ ...aboutEditForm, skills: newSkills });
+  };
+
+  const addSubject = () => {
+    setAboutEditForm({
+      ...aboutEditForm,
+      teachingSubjects: [...aboutEditForm.teachingSubjects, ''],
+    });
+  };
+
+  const removeSubject = (index: number) => {
+    const newSubjects = aboutEditForm.teachingSubjects.filter((_, i) => i !== index);
+    setAboutEditForm({ ...aboutEditForm, teachingSubjects: newSubjects });
+  };
+
+  const updateSubject = (index: number, value: string) => {
+    const newSubjects = [...aboutEditForm.teachingSubjects];
+    newSubjects[index] = value;
+    setAboutEditForm({ ...aboutEditForm, teachingSubjects: newSubjects });
   };
 
   if (isLoading) {
@@ -468,13 +613,32 @@ export default function ProfilePage() {
                     </>
                   ) : (
                     <>
-                      <Button 
-                        onClick={handleConnect}
-                        className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Connect
-                      </Button>
+                      {isTeacher ? (
+                        <Button 
+                          onClick={handleFollow}
+                          className={isFollowing ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-[#854cf4] hover:bg-[#7743e0] text-white'}
+                        >
+                          {isFollowing ? (
+                            <>
+                              <UserCheck className="w-4 h-4 mr-2" />
+                              Following
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Follow
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button 
+                          onClick={handleConnect}
+                          className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Connect
+                        </Button>
+                      )}
                       <Button variant="outline">
                         <MessageSquare className="w-4 h-4 mr-2" />
                         Message
@@ -542,14 +706,29 @@ export default function ProfilePage() {
 
           {/* Stats */}
           <div className="flex gap-6 text-sm">
-            <div>
-              <span className="font-semibold">{connections.length}</span>
-              <span className="text-muted-foreground ml-1">Connections</span>
-            </div>
-            <div>
-              <span className="font-semibold">{posts.length}</span>
-              <span className="text-muted-foreground ml-1">Posts</span>
-            </div>
+            {isTeacher ? (
+              <>
+                <div>
+                  <span className="font-semibold">{followerCount}</span>
+                  <span className="text-muted-foreground ml-1">Followers</span>
+                </div>
+                <div>
+                  <span className="font-semibold">{posts.length}</span>
+                  <span className="text-muted-foreground ml-1">Posts</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="font-semibold">{connections.length}</span>
+                  <span className="text-muted-foreground ml-1">Connections</span>
+                </div>
+                <div>
+                  <span className="font-semibold">{posts.length}</span>
+                  <span className="text-muted-foreground ml-1">Posts</span>
+                </div>
+              </>
+            )}
             <div>
               <span className="text-muted-foreground flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
@@ -563,9 +742,10 @@ export default function ProfilePage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          {isTeacher && <TabsTrigger value="experience">Experience</TabsTrigger>}
           <TabsTrigger value="posts">Posts</TabsTrigger>
           <TabsTrigger value="materials">Study Materials</TabsTrigger>
-          <TabsTrigger value="connections">Connections</TabsTrigger>
+          {!isTeacher && <TabsTrigger value="connections">Connections</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -669,6 +849,9 @@ export default function ProfilePage() {
                             class: profile.class || '',
                             schoolHistory: profile.schoolHistory || [{ schoolName: '', from: '', to: '' }],
                             aboutYourself: profile.aboutYourself || '',
+                            teachingExperience: profile.teachingExperience || [{ schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+                            skills: profile.skills || [''],
+                            teachingSubjects: profile.teachingSubjects || [''],
                           });
                         }}
                       >
@@ -1255,6 +1438,313 @@ export default function ProfilePage() {
           </div>
         </TabsContent>
 
+        {/* Teacher Experience Tab */}
+        {isTeacher && (
+          <TabsContent value="experience" className="space-y-4">
+            <Card>
+              <CardContent className="p-8">
+                <h3 className="text-lg font-semibold mb-6">Teaching Experience</h3>
+                
+                {isAboutEditMode ? (
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Teaching Experience</Label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={addTeachingExperience}
+                          className="h-8 text-xs"
+                        >
+                          + Add Experience
+                        </Button>
+                      </div>
+                      
+                      {aboutEditForm.teachingExperience.map((exp, index) => (
+                        <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">Experience {index + 1}</span>
+                            {aboutEditForm.teachingExperience.length > 1 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeTeachingExperience(index)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">School Name</Label>
+                              <Input
+                                value={exp.schoolName}
+                                onChange={(e) => updateTeachingExperience(index, 'schoolName', e.target.value)}
+                                placeholder="School Name"
+                                className="h-11"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Designation</Label>
+                              <Input
+                                value={exp.designation}
+                                onChange={(e) => updateTeachingExperience(index, 'designation', e.target.value)}
+                                placeholder="Designation"
+                                className="h-11"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Teaching Level</Label>
+                              <Input
+                                value={exp.teachingLevel}
+                                onChange={(e) => updateTeachingExperience(index, 'teachingLevel', e.target.value)}
+                                placeholder="Teaching Level"
+                                className="h-11"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">From</Label>
+                              <Input
+                                value={exp.from}
+                                onChange={(e) => updateTeachingExperience(index, 'from', e.target.value)}
+                                placeholder="From (e.g., 2020)"
+                                className="h-11"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">To</Label>
+                              <Input
+                                value={exp.to}
+                                onChange={(e) => updateTeachingExperience(index, 'to', e.target.value)}
+                                placeholder="To (e.g., 2024)"
+                                className="h-11"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {profile.teachingExperience && profile.teachingExperience.map((exp: any, index: number) => (
+                      <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <Award className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {exp.schoolName} - {exp.designation}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {exp.teachingLevel} at {exp.from} - {exp.to || 'Present'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {!profile.teachingExperience && (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">No teaching experience added yet</p>
+                        {isOwnProfile && (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Teaching Experience
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <h3 className="text-lg font-semibold mt-8 mb-6">Skills</h3>
+                
+                {isAboutEditMode ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Skills</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={addSkill}
+                        className="h-8 text-xs"
+                      >
+                        + Add Skill
+                      </Button>
+                    </div>
+                    
+                    {aboutEditForm.skills.map((skill, index) => (
+                      <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Skill {index + 1}</span>
+                          {aboutEditForm.skills.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeSkill(index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <Input
+                          value={skill}
+                          onChange={(e) => updateSkill(index, e.target.value)}
+                          placeholder="Skill name"
+                          className="h-11"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {profile.skills && profile.skills.map((skill: string, index: number) => (
+                      <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <BookOpen className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{skill}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {!profile.skills && (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">No skills added yet</p>
+                        {isOwnProfile && (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Skills
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <h3 className="text-lg font-semibold mt-8 mb-6">Teaching Subjects</h3>
+                
+                {isAboutEditMode ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Teaching Subjects</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={addSubject}
+                        className="h-8 text-xs"
+                      >
+                        + Add Subject
+                      </Button>
+                    </div>
+                    
+                    {aboutEditForm.teachingSubjects.map((subject, index) => (
+                      <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Subject {index + 1}</span>
+                          {aboutEditForm.teachingSubjects.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeSubject(index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <Input
+                          value={subject}
+                          onChange={(e) => updateSubject(index, e.target.value)}
+                          placeholder="Subject name"
+                          className="h-11"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {profile.teachingSubjects && profile.teachingSubjects.map((subject: string, index: number) => (
+                      <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <BookOpen className="w-5 h-5 text-[#854cf4]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{subject}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {!profile.teachingSubjects && (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">No teaching subjects added yet</p>
+                        {isOwnProfile && (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Teaching Subjects
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         <TabsContent value="posts" className="space-y-4">
           {posts.length === 0 ? (
             <Card>
@@ -1281,13 +1771,15 @@ export default function ProfilePage() {
           )}
         </TabsContent>
 
-        <TabsContent value="connections" className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            {connections.map((connection) => (
-              <ConnectionCard key={connection.id} connection={connection} currentUserId={parseInt(userId)} />
-            ))}
-          </div>
-        </TabsContent>
+        {!isTeacher && (
+          <TabsContent value="connections" className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {connections.map((connection) => (
+                <ConnectionCard key={connection.id} connection={connection} currentUserId={parseInt(userId)} />
+              ))}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Image Upload Dialog */}

@@ -34,6 +34,9 @@ export const users = sqliteTable('users', {
   class: text('class'),
   schoolHistory: text('school_history', { mode: 'json' }),
   aboutYourself: text('about_yourself'),
+  teachingExperience: text('teaching_experience', { mode: 'json' }),
+  skills: text('skills', { mode: 'json' }),
+  teachingSubjects: text('teaching_subjects', { mode: 'json' }),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -249,4 +252,14 @@ export const knowledgePointAwards = sqliteTable('knowledge_point_awards', {
   createdAt: text('created_at').notNull(),
 }, (table) => ({
   postAwarderIdx: index('post_awarder_idx').on(table.postId, table.awarderId),
+}));
+
+// Follows table
+export const follows = sqliteTable('follows', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  followerId: integer('follower_id').notNull().references(() => users.id),
+  followingId: integer('following_id').notNull().references(() => users.id),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  followerFollowingIdx: index('follower_following_idx').on(table.followerId, table.followingId),
 }));

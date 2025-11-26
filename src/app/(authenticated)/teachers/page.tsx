@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, UserPlus, MessageSquare, Users } from 'lucide-react';
+import { Search, UserPlus, MessageSquare, Users, UserCheck } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 
@@ -26,6 +26,9 @@ export default function TeachersPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Get current user
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
 
   useEffect(() => {
     fetchTeachers();
@@ -88,7 +91,7 @@ export default function TeachersPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTeachers.map((teacher) => (
-            <TeacherCard key={teacher.id} teacher={teacher} />
+            <TeacherCard key={teacher.id} teacher={teacher} currentUserId={currentUser.id} />
           ))}
         </div>
       )}
@@ -96,19 +99,55 @@ export default function TeachersPage() {
   );
 }
 
-function TeacherCard({ teacher }: { teacher: Teacher }) {
+function TeacherCard({ teacher, currentUserId }: { teacher: Teacher; currentUserId: number }) {
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(Math.floor(Math.random() * 500) + 50);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [isLoadingFollow, setIsLoadingFollow] = useState(true);
+
+  useEffect(() => {
+    fetchFollowStatus();
+  }, [teacher.id]);
+
+  const fetchFollowStatus = async () => {
+    try {
+      setIsLoadingFollow(true);
+      const [followersData, followStatusData] = await Promise.all([
+        apiRequest(`/api/follows?followingId=${teacher.id}`, { method: 'GET' }),
+        apiRequest(`/api/follows/status?followerId=${currentUserId}&followingId=${teacher.id}`, { method: 'GET' }),
+      ]);
+      setFollowerCount(followersData.length || 0);
+      setIsFollowing(followStatusData.isFollowing || false);
+    } catch (error) {
+      console.error('Failed to fetch follow status:', error);
+    } finally {
+      setIsLoadingFollow(false);
+    }
+  };
 
   const handleFollow = async () => {
     try {
-      // TODO: Implement actual follow API
-      setIsFollowing(!isFollowing);
-      setFollowerCount(prev => isFollowing ? prev - 1 : prev + 1);
-      toast.success(isFollowing ? 'Unfollowed teacher' : 'Following teacher');
+      if (isFollowing) {
+        await apiRequest(`/api/follows?followerId=${currentUserId}&followingId=${teacher.id}`, {
+          method: 'DELETE',
+        });
+        setIsFollowing(false);
+        setFollowerCount(prev => prev - 1);
+        toast.success('Unfollowed teacher');
+      } else {
+        await apiRequest('/api/follows', {
+          method: 'POST',
+          body: JSON.stringify({
+            followerId: currentUserId,
+            followingId: teacher.id,
+          }),
+        });
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1);
+        toast.success('Following teacher');
+      }
     } catch (error) {
-      console.error('Failed to follow teacher:', error);
-      toast.error('Failed to follow teacher');
+      console.error('Failed to follow/unfollow teacher:', error);
+      toast.error('Failed to update follow status');
     }
   };
 
@@ -141,9 +180,19 @@ function TeacherCard({ teacher }: { teacher: Teacher }) {
             size="sm" 
             className={`flex-1 ${isFollowing ? 'bg-gray-500 hover:bg-gray-600' : 'bg-[#854cf4] hover:bg-[#7743e0]'} text-white`}
             onClick={handleFollow}
+            disabled={isLoadingFollow}
           >
-            <UserPlus className="w-4 h-4 mr-2" />
-            {isFollowing ? 'Following' : 'Follow'}
+            {isFollowing ? (
+              <>
+                <UserCheck className="w-4 h-4 mr-2" />
+                Following
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Follow
+              </>
+            )}
           </Button>
           <Button size="sm" variant="outline" className="flex-1">
             <MessageSquare className="w-4 h-4 mr-2" />
