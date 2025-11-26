@@ -752,7 +752,6 @@ export default function ProfilePage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          {isTeacher && <TabsTrigger value="experience">Experience</TabsTrigger>}
           <TabsTrigger value="posts">Posts</TabsTrigger>
           <TabsTrigger value="materials">Study Materials</TabsTrigger>
           {!isTeacher && <TabsTrigger value="connections">Connections</TabsTrigger>}
@@ -820,6 +819,60 @@ export default function ProfilePage() {
                       </button>
                     </>
                   )}
+                  {isTeacher && (
+                    <>
+                      <button
+                        onClick={() => setAboutActiveSection('experience')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'experience'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Teaching experience
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('skills')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'skills'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Skills
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('subjects')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'subjects'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Teaching subjects
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('contact')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'contact'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Contact and basic info
+                      </button>
+                      <button
+                        onClick={() => setAboutActiveSection('details')}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          aboutActiveSection === 'details'
+                            ? 'bg-primary/10 text-[#854cf4]'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        Details about you
+                      </button>
+                    </>
+                  )}
                 </nav>
               </div>
 
@@ -832,6 +885,9 @@ export default function ProfilePage() {
                     {aboutActiveSection === 'location' && 'Places lived'}
                     {aboutActiveSection === 'contact' && 'Contact and basic info'}
                     {aboutActiveSection === 'details' && 'Details about you'}
+                    {aboutActiveSection === 'experience' && 'Teaching experience'}
+                    {aboutActiveSection === 'skills' && 'Skills'}
+                    {aboutActiveSection === 'subjects' && 'Teaching subjects'}
                   </h3>
                   {isOwnProfile && !isAboutEditMode && (
                     <Button
@@ -1435,6 +1491,519 @@ export default function ProfilePage() {
                     )}
                   </div>
                 )}
+
+                {/* Teacher Experience Section */}
+                {aboutActiveSection === 'experience' && isTeacher && (
+                  <div className="space-y-6">
+                    {isAboutEditMode ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Teaching Experience</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addTeachingExperience}
+                            className="h-8 text-xs"
+                          >
+                            + Add Experience
+                          </Button>
+                        </div>
+                        
+                        {aboutEditForm.teachingExperience.map((exp, index) => (
+                          <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-muted-foreground">Experience {index + 1}</span>
+                              {aboutEditForm.teachingExperience.length > 1 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeTeachingExperience(index)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">School Name</Label>
+                                <Input
+                                  value={exp.schoolName}
+                                  onChange={(e) => updateTeachingExperience(index, 'schoolName', e.target.value)}
+                                  placeholder="School Name"
+                                  className="h-11"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Designation</Label>
+                                <Input
+                                  value={exp.designation}
+                                  onChange={(e) => updateTeachingExperience(index, 'designation', e.target.value)}
+                                  placeholder="Designation"
+                                  className="h-11"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Teaching Level</Label>
+                                <Input
+                                  value={exp.teachingLevel}
+                                  onChange={(e) => updateTeachingExperience(index, 'teachingLevel', e.target.value)}
+                                  placeholder="Teaching Level"
+                                  className="h-11"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">From</Label>
+                                <Input
+                                  value={exp.from}
+                                  onChange={(e) => updateTeachingExperience(index, 'from', e.target.value)}
+                                  placeholder="From (e.g., 2020)"
+                                  className="h-11"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">To</Label>
+                                <Input
+                                  value={exp.to}
+                                  onChange={(e) => updateTeachingExperience(index, 'to', e.target.value)}
+                                  placeholder="To (e.g., 2024)"
+                                  className="h-11"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {profile.teachingExperience && profile.teachingExperience.map((exp: any, index: number) => (
+                          <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <Award className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">
+                                {exp.schoolName} - {exp.designation}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-0.5">
+                                {exp.teachingLevel} • {exp.from} - {exp.to || 'Present'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {(!profile.teachingExperience || profile.teachingExperience.length === 0) && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">No teaching experience added yet</p>
+                            {isOwnProfile && (
+                              <Button
+                                size="sm"
+                                onClick={() => setIsAboutEditMode(true)}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Add Teaching Experience
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Teacher Skills Section */}
+                {aboutActiveSection === 'skills' && isTeacher && (
+                  <div className="space-y-4">
+                    {isAboutEditMode ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Skills</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addSkill}
+                            className="h-8 text-xs"
+                          >
+                            + Add Skill
+                          </Button>
+                        </div>
+                        
+                        {aboutEditForm.skills.map((skill, index) => (
+                          <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-muted-foreground">Skill {index + 1}</span>
+                              {aboutEditForm.skills.length > 1 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeSkill(index)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                            <Input
+                              value={skill}
+                              onChange={(e) => updateSkill(index, e.target.value)}
+                              placeholder="Skill name"
+                              className="h-11"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {profile.skills && profile.skills.map((skill: string, index: number) => (
+                          <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <BookOpen className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{skill}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {(!profile.skills || profile.skills.length === 0) && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">No skills added yet</p>
+                            {isOwnProfile && (
+                              <Button
+                                size="sm"
+                                onClick={() => setIsAboutEditMode(true)}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Add Skills
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Teacher Subjects Section */}
+                {aboutActiveSection === 'subjects' && isTeacher && (
+                  <div className="space-y-4">
+                    {isAboutEditMode ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Teaching Subjects</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addSubject}
+                            className="h-8 text-xs"
+                          >
+                            + Add Subject
+                          </Button>
+                        </div>
+                        
+                        {aboutEditForm.teachingSubjects.map((subject, index) => (
+                          <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-muted-foreground">Subject {index + 1}</span>
+                              {aboutEditForm.teachingSubjects.length > 1 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeSubject(index)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                            <Input
+                              value={subject}
+                              onChange={(e) => updateSubject(index, e.target.value)}
+                              placeholder="Subject name"
+                              className="h-11"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {profile.teachingSubjects && profile.teachingSubjects.map((subject: string, index: number) => (
+                          <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <BookOpen className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{subject}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {(!profile.teachingSubjects || profile.teachingSubjects.length === 0) && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">No teaching subjects added yet</p>
+                            {isOwnProfile && (
+                              <Button
+                                size="sm"
+                                onClick={() => setIsAboutEditMode(true)}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Add Teaching Subjects
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Teacher Contact Section */}
+                {aboutActiveSection === 'contact' && isTeacher && (
+                  <div className="space-y-4">
+                    {isAboutEditMode ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Phone Number</Label>
+                          <Input
+                            value={aboutEditForm.phone}
+                            onChange={(e) => setAboutEditForm({ ...aboutEditForm, phone: e.target.value })}
+                            placeholder="e.g., +91 98765 43210"
+                            className="h-11"
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Social Links</Label>
+                          
+                          <div className="space-y-2">
+                            <Input
+                              value={aboutEditForm.socialMediaLinks.instagram || ''}
+                              onChange={(e) => setAboutEditForm({
+                                ...aboutEditForm,
+                                socialMediaLinks: { ...aboutEditForm.socialMediaLinks, instagram: e.target.value }
+                              })}
+                              placeholder="Instagram username or URL"
+                              className="h-11"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Input
+                              value={aboutEditForm.socialMediaLinks.twitter || ''}
+                              onChange={(e) => setAboutEditForm({
+                                ...aboutEditForm,
+                                socialMediaLinks: { ...aboutEditForm.socialMediaLinks, twitter: e.target.value }
+                              })}
+                              placeholder="Twitter username or URL"
+                              className="h-11"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Input
+                              value={aboutEditForm.socialMediaLinks.linkedin || ''}
+                              onChange={(e) => setAboutEditForm({
+                                ...aboutEditForm,
+                                socialMediaLinks: { ...aboutEditForm.socialMediaLinks, linkedin: e.target.value }
+                              })}
+                              placeholder="LinkedIn profile URL"
+                              className="h-11"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {profile.phone && (
+                          <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <PhoneIcon className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">{profile.phone}</p>
+                              <p className="text-sm text-muted-foreground mt-0.5">Mobile</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                            <Mail className="w-5 h-5 text-[#854cf4]" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{profile.email}</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Email</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                              <Globe className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {profile.socialMediaLinks && (profile.socialMediaLinks.instagram || profile.socialMediaLinks.twitter || profile.socialMediaLinks.linkedin) && (
+                          <div className="pt-4 border-t border-border">
+                            <h4 className="text-sm font-medium mb-3">Social Links</h4>
+                            <div className="space-y-2">
+                              {profile.socialMediaLinks.instagram && (
+                                <a
+                                  href={profile.socialMediaLinks.instagram.startsWith('http') 
+                                    ? profile.socialMediaLinks.instagram 
+                                    : `https://instagram.com/${profile.socialMediaLinks.instagram}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                  <Instagram className="w-5 h-5 text-[#854cf4]" />
+                                  <span className="text-sm font-medium">Instagram</span>
+                                </a>
+                              )}
+                              {profile.socialMediaLinks.twitter && (
+                                <a
+                                  href={profile.socialMediaLinks.twitter.startsWith('http') 
+                                    ? profile.socialMediaLinks.twitter 
+                                    : `https://twitter.com/${profile.socialMediaLinks.twitter}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                  <Twitter className="w-5 h-5 text-[#854cf4]" />
+                                  <span className="text-sm font-medium">Twitter</span>
+                                </a>
+                              )}
+                              {profile.socialMediaLinks.linkedin && (
+                                <a
+                                  href={profile.socialMediaLinks.linkedin.startsWith('http') 
+                                    ? profile.socialMediaLinks.linkedin 
+                                    : `https://linkedin.com/in/${profile.socialMediaLinks.linkedin}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                  <Linkedin className="w-5 h-5 text-[#854cf4]" />
+                                  <span className="text-sm font-medium">LinkedIn</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {!profile.phone && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">No contact information added yet</p>
+                            {isOwnProfile && (
+                              <Button
+                                size="sm"
+                                onClick={() => setIsAboutEditMode(true)}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Add Contact Info
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Teacher Details Section */}
+                {aboutActiveSection === 'details' && isTeacher && (
+                  <div className="space-y-4">
+                    {isAboutEditMode ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">About Yourself</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {aboutEditForm.aboutYourself.length}/1000
+                          </span>
+                        </div>
+                        <Textarea
+                          value={aboutEditForm.aboutYourself}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 1000) {
+                              setAboutEditForm({ ...aboutEditForm, aboutYourself: e.target.value });
+                            }
+                          }}
+                          placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
+                          rows={8}
+                          maxLength={1000}
+                          className="resize-none"
+                        />
+                      </div>
+                    ) : profile.aboutYourself ? (
+                      <div className="py-2">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.aboutYourself}</p>
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">Tell others about yourself</p>
+                        {isOwnProfile && (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAboutEditMode(true)}
+                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Add Details
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -1447,313 +2016,6 @@ export default function ProfilePage() {
             ))}
           </div>
         </TabsContent>
-
-        {/* Teacher Experience Tab */}
-        {isTeacher && (
-          <TabsContent value="experience" className="space-y-4">
-            <Card>
-              <CardContent className="p-8">
-                <h3 className="text-lg font-semibold mb-6">Teaching Experience</h3>
-                
-                {isAboutEditMode ? (
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Teaching Experience</Label>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={addTeachingExperience}
-                          className="h-8 text-xs"
-                        >
-                          + Add Experience
-                        </Button>
-                      </div>
-                      
-                      {aboutEditForm.teachingExperience.map((exp, index) => (
-                        <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-muted-foreground">Experience {index + 1}</span>
-                            {aboutEditForm.teachingExperience.length > 1 && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeTeachingExperience(index)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">School Name</Label>
-                              <Input
-                                value={exp.schoolName}
-                                onChange={(e) => updateTeachingExperience(index, 'schoolName', e.target.value)}
-                                placeholder="School Name"
-                                className="h-11"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Designation</Label>
-                              <Input
-                                value={exp.designation}
-                                onChange={(e) => updateTeachingExperience(index, 'designation', e.target.value)}
-                                placeholder="Designation"
-                                className="h-11"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Teaching Level</Label>
-                              <Input
-                                value={exp.teachingLevel}
-                                onChange={(e) => updateTeachingExperience(index, 'teachingLevel', e.target.value)}
-                                placeholder="Teaching Level"
-                                className="h-11"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">From</Label>
-                              <Input
-                                value={exp.from}
-                                onChange={(e) => updateTeachingExperience(index, 'from', e.target.value)}
-                                placeholder="From (e.g., 2020)"
-                                className="h-11"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">To</Label>
-                              <Input
-                                value={exp.to}
-                                onChange={(e) => updateTeachingExperience(index, 'to', e.target.value)}
-                                placeholder="To (e.g., 2024)"
-                                className="h-11"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {profile.teachingExperience && profile.teachingExperience.map((exp: any, index: number) => (
-                      <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
-                          <Award className="w-5 h-5 text-[#854cf4]" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {exp.schoolName} - {exp.designation}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-0.5">
-                            {exp.teachingLevel} at {exp.from} - {exp.to || 'Present'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
-                            <Globe className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
-                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {!profile.teachingExperience && (
-                      <div className="py-12 text-center">
-                        <p className="text-sm text-muted-foreground mb-4">No teaching experience added yet</p>
-                        {isOwnProfile && (
-                          <Button
-                            size="sm"
-                            onClick={() => setIsAboutEditMode(true)}
-                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                          >
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Add Teaching Experience
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <h3 className="text-lg font-semibold mt-8 mb-6">Skills</h3>
-                
-                {isAboutEditMode ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Skills</Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={addSkill}
-                        className="h-8 text-xs"
-                      >
-                        + Add Skill
-                      </Button>
-                    </div>
-                    
-                    {aboutEditForm.skills.map((skill, index) => (
-                      <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Skill {index + 1}</span>
-                          {aboutEditForm.skills.length > 1 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeSkill(index)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <Input
-                          value={skill}
-                          onChange={(e) => updateSkill(index, e.target.value)}
-                          placeholder="Skill name"
-                          className="h-11"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {profile.skills && profile.skills.map((skill: string, index: number) => (
-                      <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
-                          <BookOpen className="w-5 h-5 text-[#854cf4]" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{skill}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
-                            <Globe className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
-                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {!profile.skills && (
-                      <div className="py-12 text-center">
-                        <p className="text-sm text-muted-foreground mb-4">No skills added yet</p>
-                        {isOwnProfile && (
-                          <Button
-                            size="sm"
-                            onClick={() => setIsAboutEditMode(true)}
-                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                          >
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Add Skills
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <h3 className="text-lg font-semibold mt-8 mb-6">Teaching Subjects</h3>
-                
-                {isAboutEditMode ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Teaching Subjects</Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={addSubject}
-                        className="h-8 text-xs"
-                      >
-                        + Add Subject
-                      </Button>
-                    </div>
-                    
-                    {aboutEditForm.teachingSubjects.map((subject, index) => (
-                      <div key={index} className="p-4 bg-muted/30 rounded-xl space-y-3 border border-border/50">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Subject {index + 1}</span>
-                          {aboutEditForm.teachingSubjects.length > 1 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeSubject(index)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <Input
-                          value={subject}
-                          onChange={(e) => updateSubject(index, e.target.value)}
-                          placeholder="Subject name"
-                          className="h-11"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {profile.teachingSubjects && profile.teachingSubjects.map((subject: string, index: number) => (
-                      <div key={index} className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
-                          <BookOpen className="w-5 h-5 text-[#854cf4]" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{subject}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
-                            <Globe className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                          <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
-                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {!profile.teachingSubjects && (
-                      <div className="py-12 text-center">
-                        <p className="text-sm text-muted-foreground mb-4">No teaching subjects added yet</p>
-                        {isOwnProfile && (
-                          <Button
-                            size="sm"
-                            onClick={() => setIsAboutEditMode(true)}
-                            className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                          >
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Add Teaching Subjects
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
 
         <TabsContent value="posts" className="space-y-4">
           {posts.length === 0 ? (

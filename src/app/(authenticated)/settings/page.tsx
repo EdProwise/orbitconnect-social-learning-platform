@@ -34,6 +34,9 @@ export default function SettingsPage() {
     class: '',
     schoolHistory: [{ schoolName: '', from: '', to: '' }],
     aboutYourself: '',
+    teachingExperience: [{ schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+    skills: [''],
+    teachingSubjects: [''],
   });
 
   useEffect(() => {
@@ -73,6 +76,9 @@ export default function SettingsPage() {
         class: userData.class || '',
         schoolHistory: userData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
         aboutYourself: userData.aboutYourself || '',
+        teachingExperience: userData.teachingExperience || [{ schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+        skills: userData.skills || [''],
+        teachingSubjects: userData.teachingSubjects || [''],
       });
     } catch (error) {
       console.error('Failed to fetch user data:', error);
@@ -97,10 +103,43 @@ export default function SettingsPage() {
       setIsSaving(true);
       const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
       
-      await apiRequest(`/api/users?id=${user.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(profileForm),
-      });
+      // For teachers, handle teacher-specific fields separately
+      if (isTeacher) {
+        // Update basic fields with PUT
+        await apiRequest(`/api/users?id=${user.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: profileForm.name,
+            email: profileForm.email,
+            bio: profileForm.bio,
+            schoolId: profileForm.schoolId,
+            currentTown: profileForm.currentTown,
+            phone: profileForm.phone,
+            socialMediaLinks: profileForm.socialMediaLinks,
+            aboutYourself: profileForm.aboutYourself,
+          }),
+        });
+        
+        // Update teacher-specific fields with PATCH
+        const cleanedTeachingExperience = profileForm.teachingExperience.filter(exp => exp.schoolName && exp.designation && exp.teachingLevel);
+        const cleanedSkills = profileForm.skills.filter(skill => skill.trim() !== '');
+        const cleanedSubjects = profileForm.teachingSubjects.filter(subject => subject.trim() !== '');
+        
+        await apiRequest(`/api/users?id=${user.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            teachingExperience: cleanedTeachingExperience.length > 0 ? cleanedTeachingExperience : null,
+            skills: cleanedSkills.length > 0 ? cleanedSkills : null,
+            teachingSubjects: cleanedSubjects.length > 0 ? cleanedSubjects : null,
+          }),
+        });
+      } else {
+        // For students, use PUT
+        await apiRequest(`/api/users?id=${user.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(profileForm),
+        });
+      }
       
       toast.success('Profile updated successfully!');
       // Refresh user data
@@ -201,7 +240,63 @@ export default function SettingsPage() {
     setProfileForm({ ...profileForm, schoolHistory: newHistory });
   };
 
+  // Teacher-specific helper functions
+  const addTeachingExperience = () => {
+    setProfileForm({
+      ...profileForm,
+      teachingExperience: [...profileForm.teachingExperience, { schoolName: '', designation: '', teachingLevel: '', from: '', to: '' }],
+    });
+  };
+
+  const removeTeachingExperience = (index: number) => {
+    const newExperience = profileForm.teachingExperience.filter((_, i) => i !== index);
+    setProfileForm({ ...profileForm, teachingExperience: newExperience });
+  };
+
+  const updateTeachingExperience = (index: number, field: string, value: string) => {
+    const newExperience = [...profileForm.teachingExperience];
+    newExperience[index] = { ...newExperience[index], [field]: value };
+    setProfileForm({ ...profileForm, teachingExperience: newExperience });
+  };
+
+  const addSkill = () => {
+    setProfileForm({
+      ...profileForm,
+      skills: [...profileForm.skills, ''],
+    });
+  };
+
+  const removeSkill = (index: number) => {
+    const newSkills = profileForm.skills.filter((_, i) => i !== index);
+    setProfileForm({ ...profileForm, skills: newSkills });
+  };
+
+  const updateSkill = (index: number, value: string) => {
+    const newSkills = [...profileForm.skills];
+    newSkills[index] = value;
+    setProfileForm({ ...profileForm, skills: newSkills });
+  };
+
+  const addSubject = () => {
+    setProfileForm({
+      ...profileForm,
+      teachingSubjects: [...profileForm.teachingSubjects, ''],
+    });
+  };
+
+  const removeSubject = (index: number) => {
+    const newSubjects = profileForm.teachingSubjects.filter((_, i) => i !== index);
+    setProfileForm({ ...profileForm, teachingSubjects: newSubjects });
+  };
+
+  const updateSubject = (index: number, value: string) => {
+    const newSubjects = [...profileForm.teachingSubjects];
+    newSubjects[index] = value;
+    setProfileForm({ ...profileForm, teachingSubjects: newSubjects });
+  };
+
   const isStudent = currentUser?.role === 'STUDENT';
+  const isTeacher = currentUser?.role === 'TEACHER';
 
   if (isLoading) {
     return (
@@ -490,6 +585,249 @@ export default function SettingsPage() {
                         <Textarea
                           id="aboutYourself"
                           placeholder="Tell us more about yourself, your interests, goals, and aspirations..."
+                          rows={6}
+                          value={profileForm.aboutYourself}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 1000) {
+                              setProfileForm({ ...profileForm, aboutYourself: e.target.value });
+                            }
+                          }}
+                          maxLength={1000}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {isTeacher && (
+                <>
+                  <div className="pt-4 border-t">
+                    <h3 className="text-lg font-semibold mb-4">Teacher Information</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="assignedSchool">Assigned School</Label>
+                        <Select
+                          value={profileForm.schoolId?.toString() || 'none'}
+                          onValueChange={(value) => setProfileForm({ ...profileForm, schoolId: value === 'none' ? null : parseInt(value) })}
+                        >
+                          <SelectTrigger id="assignedSchool">
+                            <SelectValue placeholder="Select a school" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No school assigned</SelectItem>
+                            {schools.map((s) => (
+                              <SelectItem key={s.id} value={s.id.toString()}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          This is your current assigned school shown in your profile
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="currentTown">Current Town</Label>
+                        <Input
+                          id="currentTown"
+                          placeholder="e.g., Mumbai"
+                          value={profileForm.currentTown}
+                          onChange={(e) => setProfileForm({ ...profileForm, currentTown: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          placeholder="e.g., +91 98765 43210"
+                          value={profileForm.phone}
+                          onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Social Media Links</Label>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Instagram username or URL"
+                            value={profileForm.socialMediaLinks.instagram || ''}
+                            onChange={(e) => setProfileForm({
+                              ...profileForm,
+                              socialMediaLinks: { ...profileForm.socialMediaLinks, instagram: e.target.value }
+                            })}
+                          />
+                          <Input
+                            placeholder="Twitter/X username or URL"
+                            value={profileForm.socialMediaLinks.twitter || ''}
+                            onChange={(e) => setProfileForm({
+                              ...profileForm,
+                              socialMediaLinks: { ...profileForm.socialMediaLinks, twitter: e.target.value }
+                            })}
+                          />
+                          <Input
+                            placeholder="LinkedIn profile URL"
+                            value={profileForm.socialMediaLinks.linkedin || ''}
+                            onChange={(e) => setProfileForm({
+                              ...profileForm,
+                              socialMediaLinks: { ...profileForm.socialMediaLinks, linkedin: e.target.value }
+                            })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Teaching Experience</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addTeachingExperience}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Experience
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {profileForm.teachingExperience.map((exp, index) => (
+                            <div key={index} className="p-4 border rounded-lg space-y-2 bg-muted/30">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Experience {index + 1}</span>
+                                {profileForm.teachingExperience.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeTeachingExperience(index)}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <Input
+                                value={exp.schoolName}
+                                onChange={(e) => updateTeachingExperience(index, 'schoolName', e.target.value)}
+                                placeholder="School Name"
+                              />
+                              <Input
+                                value={exp.designation}
+                                onChange={(e) => updateTeachingExperience(index, 'designation', e.target.value)}
+                                placeholder="Designation (e.g., Senior Teacher)"
+                              />
+                              <Input
+                                value={exp.teachingLevel}
+                                onChange={(e) => updateTeachingExperience(index, 'teachingLevel', e.target.value)}
+                                placeholder="Teaching Level (e.g., High School)"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={exp.from}
+                                  onChange={(e) => updateTeachingExperience(index, 'from', e.target.value)}
+                                  placeholder="From (e.g., 2020)"
+                                />
+                                <Input
+                                  value={exp.to}
+                                  onChange={(e) => updateTeachingExperience(index, 'to', e.target.value)}
+                                  placeholder="To (e.g., 2024)"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Skills</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addSkill}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Skill
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {profileForm.skills.map((skill, index) => (
+                            <div key={index} className="p-4 border rounded-lg space-y-2 bg-muted/30">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Skill {index + 1}</span>
+                                {profileForm.skills.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeSkill(index)}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <Input
+                                value={skill}
+                                onChange={(e) => updateSkill(index, e.target.value)}
+                                placeholder="Skill name (e.g., Classroom Management)"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Teaching Subjects</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={addSubject}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Subject
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {profileForm.teachingSubjects.map((subject, index) => (
+                            <div key={index} className="p-4 border rounded-lg space-y-2 bg-muted/30">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Subject {index + 1}</span>
+                                {profileForm.teachingSubjects.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeSubject(index)}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <Input
+                                value={subject}
+                                onChange={(e) => updateSubject(index, e.target.value)}
+                                placeholder="Subject name (e.g., Mathematics)"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="aboutYourself">About Yourself</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {profileForm.aboutYourself.length}/1000 characters
+                          </span>
+                        </div>
+                        <Textarea
+                          id="aboutYourself"
+                          placeholder="Tell us more about yourself, your teaching philosophy, goals, and aspirations..."
                           rows={6}
                           value={profileForm.aboutYourself}
                           onChange={(e) => {
