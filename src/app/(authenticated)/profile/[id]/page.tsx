@@ -120,6 +120,11 @@ export default function ProfilePage() {
   const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
   const isOwnProfile = currentUser.id === parseInt(userId);
   const isTeacher = profile?.role === 'TEACHER';
+  const isStudent = profile?.role === 'STUDENT';
+  
+  // Check if current user can connect with this profile
+  const canConnect = isStudent && currentUser.role === 'STUDENT' && !isOwnProfile;
+  const canFollow = isTeacher && !isOwnProfile;
 
   useEffect(() => {
     if (userId) {
@@ -203,6 +208,12 @@ export default function ProfilePage() {
   };
 
   const handleConnect = async () => {
+    // Prevent teachers and schools from connecting with students
+    if (currentUser.role === 'TEACHER' || currentUser.role === 'SCHOOL') {
+      toast.error('Only students can send connection requests');
+      return;
+    }
+    
     try {
       await apiRequest('/api/connections', {
         method: 'POST',
@@ -491,8 +502,6 @@ export default function ProfilePage() {
     );
   }
 
-  const isStudent = profile.role === 'STUDENT';
-
   return (
     <div className="space-y-6">
       {/* Cover Image */}
@@ -613,7 +622,7 @@ export default function ProfilePage() {
                     </>
                   ) : (
                     <>
-                      {isTeacher ? (
+                      {canFollow && (
                         <Button 
                           onClick={handleFollow}
                           className={isFollowing ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-[#854cf4] hover:bg-[#7743e0] text-white'}
@@ -630,7 +639,8 @@ export default function ProfilePage() {
                             </>
                           )}
                         </Button>
-                      ) : (
+                      )}
+                      {canConnect && (
                         <Button 
                           onClick={handleConnect}
                           className="bg-[#854cf4] hover:bg-[#7743e0] text-white"

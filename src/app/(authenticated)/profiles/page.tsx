@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,11 +24,22 @@ interface User {
 }
 
 export default function ProfilesPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Get current user
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+
   useEffect(() => {
+    // Redirect teachers and schools away from this page
+    if (currentUser.role === 'TEACHER' || currentUser.role === 'SCHOOL') {
+      toast.error('This page is only available for students');
+      router.push('/feed');
+      return;
+    }
+    
     fetchUsers();
   }, []);
 
@@ -48,6 +60,11 @@ export default function ProfilesPage() {
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Don't render if not a student
+  if (currentUser.role === 'TEACHER' || currentUser.role === 'SCHOOL') {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
