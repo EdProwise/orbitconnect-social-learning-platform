@@ -1036,10 +1036,131 @@ export default function ProfilePage() {
                       </div>
                     )}
 
-                    {!isStudent && (
-                      <div className="py-12 text-center">
-                        <p className="text-sm text-muted-foreground">No information available</p>
-                      </div>
+                    {isTeacher && (
+                      <>
+                        {/* Teacher Experience Overview */}
+                        {profile.teachingExperience && profile.teachingExperience.length > 0 && (
+                          <button
+                            onClick={() => setAboutActiveSection('experience')}
+                            className="w-full flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors text-left"
+                          >
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <Award className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium mb-1">Teaching Experience</p>
+                              <p className="text-sm text-muted-foreground">
+                                {profile.teachingExperience[0].schoolName} - {profile.teachingExperience[0].designation}
+                                {profile.teachingExperience.length > 1 && ` and ${profile.teachingExperience.length - 1} more`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Teacher Skills Overview */}
+                        {profile.skills && profile.skills.length > 0 && (
+                          <button
+                            onClick={() => setAboutActiveSection('skills')}
+                            className="w-full flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors text-left"
+                          >
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <BookOpen className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium mb-1">Skills</p>
+                              <p className="text-sm text-muted-foreground">
+                                {profile.skills.slice(0, 3).join(', ')}
+                                {profile.skills.length > 3 && ` and ${profile.skills.length - 3} more`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Teacher Subjects Overview */}
+                        {profile.teachingSubjects && profile.teachingSubjects.length > 0 && (
+                          <button
+                            onClick={() => setAboutActiveSection('subjects')}
+                            className="w-full flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors text-left"
+                          >
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <GraduationCap className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium mb-1">Teaching Subjects</p>
+                              <p className="text-sm text-muted-foreground">
+                                {profile.teachingSubjects.slice(0, 3).join(', ')}
+                                {profile.teachingSubjects.length > 3 && ` and ${profile.teachingSubjects.length - 3} more`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Teacher Contact Overview */}
+                        {profile.phone && (
+                          <button
+                            onClick={() => setAboutActiveSection('contact')}
+                            className="w-full flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors text-left"
+                          >
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <PhoneIcon className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold">{profile.phone}</p>
+                              <p className="text-sm text-muted-foreground mt-0.5">Mobile</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* If teacher has no data at all */}
+                        {(!profile.teachingExperience || profile.teachingExperience.length === 0) &&
+                         (!profile.skills || profile.skills.length === 0) &&
+                         (!profile.teachingSubjects || profile.teachingSubjects.length === 0) &&
+                         !profile.phone && (
+                          <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground mb-4">Add information to help others know you better</p>
+                            {isOwnProfile && (
+                              <div className="flex items-center justify-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => setIsAboutEditMode(true)}
+                                  className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                                >
+                                  <Edit2 className="w-4 h-4 mr-2" />
+                                  Add Information
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push('/settings')}
+                                >
+                                  <Edit2 className="w-4 h-4 mr-2" />
+                                  Edit in Settings
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {isOwnProfile && isStudent && !profile.bio && !school && !profile.currentTown && !profile.phone && (
