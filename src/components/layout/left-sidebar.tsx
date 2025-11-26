@@ -32,7 +32,7 @@ export function LeftSidebar({ user }: LeftSidebarProps) {
     { name: 'Tutors', href: '/tutors', icon: GraduationCap },
     { name: 'Courses', href: '/courses', icon: BookOpen },
     { name: 'Saved', href: '/saved', icon: Bookmark },
-    { name: 'Profile', href: `/profile/${user.id}`, icon: UserCircle },
+    { name: 'Profile', href: `/profile/${user.userId}`, icon: UserCircle },
   ];
 
   return (
