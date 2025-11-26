@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
     // Check if total would exceed 100 points
     if (newTotal > 100) {
       return NextResponse.json({
-        error: `You have already awarded ${totalPreviousPoints} points. Maximum total is 100 points per post`,
+        error: `You have already awarded ${totalPreviousPoints} points to this post. Maximum is 100 points per user per post`,
         code: "POINTS_LIMIT_EXCEEDED"
       }, { status: 400 });
     }

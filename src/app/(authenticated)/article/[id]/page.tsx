@@ -508,7 +508,7 @@ export default function ArticlePage() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Award knowledge points to recognize quality content (max 100 points per post)
+              Award knowledge points to recognize quality content (max 100 points per user per post)
             </p>
             <div className="p-4 bg-muted rounded-lg">
               <div className="flex items-center justify-between mb-2">
