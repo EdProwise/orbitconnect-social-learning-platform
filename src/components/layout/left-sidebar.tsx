@@ -20,20 +20,20 @@ interface LeftSidebarProps {
   user: JWTPayload;
 }
 
-const navigationItems = [
-  { name: 'Home', href: '/feed', icon: Home },
-  { name: 'Mentorship', href: '/teachers', icon: UserCheck },
-  { name: 'Meet GenZ', href: '/profiles', icon: Users },
-  { name: 'Discover School', href: '/schools', icon: School },
-  { name: 'Organize', href: '/organize', icon: Calendar },
-  { name: 'Tutors', href: '/tutors', icon: GraduationCap },
-  { name: 'Courses', href: '/courses', icon: BookOpen },
-  { name: 'Saved', href: '/saved', icon: Bookmark },
-  { name: 'Profile', href: '/settings', icon: UserCircle },
-];
-
 export function LeftSidebar({ user }: LeftSidebarProps) {
   const pathname = usePathname();
+
+  const navigationItems = [
+    { name: 'Home', href: '/feed', icon: Home },
+    { name: 'Mentorship', href: '/teachers', icon: UserCheck },
+    { name: 'Meet GenZ', href: '/profiles', icon: Users },
+    { name: 'Discover School', href: '/schools', icon: School },
+    { name: 'Organize', href: '/organize', icon: Calendar },
+    { name: 'Tutors', href: '/tutors', icon: GraduationCap },
+    { name: 'Courses', href: '/courses', icon: BookOpen },
+    { name: 'Saved', href: '/saved', icon: Bookmark },
+    { name: 'Profile', href: `/profile/${user.id}`, icon: UserCircle },
+  ];
 
   return (
     <nav className="p-4 space-y-2">
