@@ -149,8 +149,8 @@ export default function SettingsPage() {
       const updatedUser = { ...user, ...profileForm };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      // Dispatch storage event to notify other components
-      window.dispatchEvent(new Event('storage'));
+      // Dispatch custom event to notify profile page
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
     } catch (error) {
       console.error('Failed to update profile:', error);
       toast.error('Failed to update profile');

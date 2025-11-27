@@ -136,6 +136,18 @@ export default function ProfilePage() {
     }
   }, [userId, profile?.role]);
 
+  // Listen for storage events to refetch when settings are updated
+  useEffect(() => {
+    const handleStorageChange = () => {
+      if (userId) {
+        fetchProfile();
+      }
+    };
+
+    window.addEventListener('profileUpdated', handleStorageChange);
+    return () => window.removeEventListener('profileUpdated', handleStorageChange);
+  }, [userId]);
+
   const fetchSchools = async () => {
     try {
       const schoolsData = await apiRequest('/api/schools?limit=100', { method: 'GET' });
