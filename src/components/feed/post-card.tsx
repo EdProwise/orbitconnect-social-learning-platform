@@ -116,6 +116,8 @@ export function PostCard({ post }: PostCardProps) {
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  const [savedRecordId, setSavedRecordId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Get current user
   const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -130,7 +132,37 @@ export function PostCard({ post }: PostCardProps) {
     if (post.type === 'POLL' && post.pollOptions) {
       initializePollVotes();
     }
+    // Initialize saved state for this post
+    initSavedState();
   }, [post.id]);
+
+  // When reactions or user changes, set user's current reaction for this post
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const mine = reactions.find((r) => r.userId === currentUser.id);
+    setUserReaction(mine?.type ?? null);
+  }, [reactions, currentUser?.id]);
+
+  // Selected reaction visuals
+  const selectedReaction = reactionTypes.find((r) => r.type === userReaction);
+  const SelectedReactionIcon = selectedReaction?.icon || ThumbsUp;
+  const selectedReactionColor = selectedReaction?.color || '';
+
+  const initSavedState = async () => {
+    try {
+      if (!currentUser?.id) return;
+      const result = await apiRequest<any[]>(`/api/saved-posts?userId=${currentUser.id}&postId=${post.id}&limit=1`, { method: 'GET' });
+      if (Array.isArray(result) && result.length > 0) {
+        setIsSaved(true);
+        setSavedRecordId(result[0].id);
+      } else {
+        setIsSaved(false);
+        setSavedRecordId(null);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchKnowledgePoints = async () => {
     try {
@@ -360,21 +392,41 @@ export function PostCard({ post }: PostCardProps) {
     try {
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
+      if (!user?.id) {
+        toast.error('Please log in to save posts');
+        return;
+      }
+      if (isSaving) return;
+      setIsSaving(true);
 
-      if (isSaved) {
-        // TODO: Unsave post
+      if (isSaved && savedRecordId != null) {
+        await apiRequest(`/api/saved-posts?id=${savedRecordId}`, { method: 'DELETE' });
+        setIsSaved(false);
+        setSavedRecordId(null);
+        toast.success('Removed from saved');
       } else {
-        await apiRequest('/api/saved-posts', {
+        const created = await apiRequest('/api/saved-posts', {
           method: 'POST',
           body: JSON.stringify({
-            userId: user?.id || 5,
+            userId: user.id,
             postId: post.id,
           }),
         });
+        setIsSaved(true);
+        setSavedRecordId(created.id);
+        toast.success('Saved');
       }
-      setIsSaved(!isSaved);
-    } catch (error) {
-      console.error('Failed to save post:', error);
+    } catch (error: any) {
+      if (error?.code === 'DUPLICATE_SAVE') {
+        setIsSaved(true);
+        toast.message?.('Already saved');
+      } else {
+        console.error('Failed to save post:', error);
+        toast.error('Failed to update saved state');
+      }
+    } finally {
+      window.dispatchEvent(new Event('savedPostsUpdated'));
+      setIsSaving(false);
     }
   };
 
@@ -550,12 +602,12 @@ export function PostCard({ post }: PostCardProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`w-full ${userReaction === 'LIKE' ? 'text-blue-500' : ''}`}
+                className={`w-full ${userReaction ? selectedReactionColor : ''}`}
                 onClick={() => setShowReactionPicker(!showReactionPicker)}
               >
-                <ThumbsUp className="w-4 h-4 mr-2" />
+                <SelectedReactionIcon className="w-4 h-4 mr-2" />
                 <span className="text-xs">
-                  {userReaction ? reactionTypes.find(r => r.type === userReaction)?.label : 'Like'}
+                  {selectedReaction ? selectedReaction.label : 'Like'}
                 </span>
               </Button>
               
@@ -611,6 +663,7 @@ export function PostCard({ post }: PostCardProps) {
               size="sm" 
               className="flex-1"
               onClick={handleSave}
+              disabled={isSaving}
             >
               <Bookmark className={`w-4 h-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
               {isSaved ? 'Saved' : 'Save'}
@@ -927,12 +980,12 @@ export function PostCard({ post }: PostCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              className={`w-full ${userReaction === 'LIKE' ? 'text-blue-500' : ''}`}
+              className={`w-full ${userReaction ? selectedReactionColor : ''}`}
               onClick={() => setShowReactionPicker(!showReactionPicker)}
             >
-              <ThumbsUp className="w-4 h-4 mr-2" />
+              <SelectedReactionIcon className="w-4 h-4 mr-2" />
               <span className="text-xs">
-                {userReaction ? reactionTypes.find(r => r.type === userReaction)?.label : 'Like'}
+                {selectedReaction ? selectedReaction.label : 'Like'}
               </span>
             </Button>
             
@@ -988,6 +1041,7 @@ export function PostCard({ post }: PostCardProps) {
             size="sm" 
             className="flex-1"
             onClick={handleSave}
+            disabled={isSaving}
           >
             <Bookmark className={`w-4 h-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
             {isSaved ? 'Saved' : 'Save'}

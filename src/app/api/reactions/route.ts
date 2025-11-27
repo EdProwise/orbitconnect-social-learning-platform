@@ -230,35 +230,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check for duplicate reaction
-    const duplicateConditions = [
-      eq(reactions.userId, parseInt(userId)),
-      eq(reactions.type, type),
-    ];
-
+    // Enforce single reaction per user per target (post or comment)
+    const targetConditions = [eq(reactions.userId, parseInt(userId))];
     if (postId) {
-      duplicateConditions.push(eq(reactions.postId, parseInt(postId)));
+      targetConditions.push(eq(reactions.postId, parseInt(postId)));
     } else {
-      duplicateConditions.push(eq(reactions.commentId, parseInt(commentId)));
+      targetConditions.push(eq(reactions.commentId, parseInt(commentId)));
     }
 
-    const existingReaction = await db
+    const existingAny = await db
       .select()
       .from(reactions)
-      .where(and(...duplicateConditions))
+      .where(and(...targetConditions))
       .limit(1);
 
-    if (existingReaction.length > 0) {
-      return NextResponse.json(
-        {
-          error: 'User has already reacted with this type on this post/comment',
-          code: 'DUPLICATE_REACTION',
-        },
-        { status: 400 }
-      );
+    // If reaction exists and type is same, return existing (idempotent)
+    if (existingAny.length > 0) {
+      if (existingAny[0].type === type) {
+        return NextResponse.json(existingAny[0], { status: 200 });
+      }
+      // Update existing reaction to new type (allow changing reaction)
+      const updated = await db
+        .update(reactions)
+        .set({ type })
+        .where(eq(reactions.id, existingAny[0].id))
+        .returning();
+      return NextResponse.json(updated[0], { status: 200 });
     }
 
-    // Create the reaction
+    // Create the reaction if none exists yet
     const newReaction = await db
       .insert(reactions)
       .values({

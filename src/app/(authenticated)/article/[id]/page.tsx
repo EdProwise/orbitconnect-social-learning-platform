@@ -117,6 +117,13 @@ export default function ArticlePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, currentUserId]);
 
+  useEffect(() => {
+    // Set current user's reaction when reactions or currentUserId changes
+    if (currentUserId == null) return;
+    const mine = reactions.find((r) => r.userId === currentUserId);
+    setUserReaction(mine?.type ?? null);
+  }, [reactions, currentUserId]);
+
   const refreshSavedStatus = async () => {
     try {
       const result = await apiRequest<any[]>(`/api/saved-posts?userId=${currentUserId}&postId=${postId}&limit=1`, { method: 'GET' });
@@ -331,6 +338,11 @@ export default function ArticlePage() {
 
   const isAuthor = currentUser && post && currentUser.id === post.userId;
 
+  // Selected reaction icon/label/color for main button
+  const selectedReaction = reactionTypes.find((r) => r.type === userReaction);
+  const SelectedReactionIcon = selectedReaction?.icon || ThumbsUp;
+  const selectedReactionColor = selectedReaction?.color || '';
+
   if (isLoadingPost) {
     return (
       <div className="max-w-4xl mx-auto py-8">
@@ -447,12 +459,12 @@ export default function ArticlePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`w-full ${userReaction === 'LIKE' ? 'text-blue-500' : ''}`}
+                className={`w-full ${userReaction ? selectedReactionColor : ''}`}
                 onClick={() => setShowReactionPicker(!showReactionPicker)}
               >
-                <ThumbsUp className="w-4 h-4 mr-2" />
+                <SelectedReactionIcon className="w-4 h-4 mr-2" />
                 <span className="text-xs">
-                  {userReaction ? reactionTypes.find(r => r.type === userReaction)?.label : 'Like'}
+                  {selectedReaction ? selectedReaction.label : 'Like'}
                 </span>
               </Button>
               
