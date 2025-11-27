@@ -30,7 +30,12 @@ import {
   Edit2,
   Trash2,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Twitter,
+  Facebook,
+  Linkedin,
+  Whatsapp,
+  Copy
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/api-client';
@@ -118,6 +123,7 @@ export function PostCard({ post }: PostCardProps) {
   const [shareUrl, setShareUrl] = useState('');
   const [savedRecordId, setSavedRecordId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReacting, setIsReacting] = useState(false);
 
   // Get current user
   const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -294,25 +300,47 @@ export function PostCard({ post }: PostCardProps) {
   };
 
   const handleReaction = async (type: string) => {
+    if (isReacting) return;
+
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+
+    if (!user?.id) {
+      toast.error('Please log in to react');
+      return;
+    }
+
     try {
-      const userStr = localStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
+      setIsReacting(true);
+      // Optimistic update
+      setUserReaction(type);
+      setShowReactionPicker(false);
+      setReactions((prev) => {
+        const mineIndex = prev.findIndex((r) => r.userId === user.id && r.postId === post.id);
+        if (mineIndex >= 0) {
+          const copy = [...prev];
+          copy[mineIndex] = { ...copy[mineIndex], type };
+          return copy;
+        }
+        return [...prev, { id: -1, userId: user.id, postId: post.id, type }];
+      });
 
       await apiRequest('/api/reactions', {
         method: 'POST',
         body: JSON.stringify({
           postId: post.id,
-          userId: user?.id || 5,
+          userId: user.id,
           type,
         }),
       });
+      // Refresh from server to reconcile
       fetchReactions();
-      setUserReaction(type);
-      setShowReactionPicker(false);
       toast.success(`Reacted with ${type.toLowerCase()}`);
     } catch (error) {
       console.error('Failed to add reaction:', error);
       toast.error('Failed to add reaction');
+    } finally {
+      setIsReacting(false);
     }
   };
 
@@ -361,6 +389,17 @@ export function PostCard({ post }: PostCardProps) {
     }
   };
 
+  const openShareDialog = () => {
+    try {
+      const origin = window.location.origin;
+      const link = post.type === 'ARTICLE' ? `/article/${post.id}` : `/feed?post=${post.id}`;
+      setShareUrl(`${origin}${link}`);
+      setShowShareDialog(true);
+    } catch {
+      // no-op
+    }
+  };
+
   const handleShare = async (platform?: string) => {
     const url = shareUrl;
     const text = `Check out this ${post.type.toLowerCase()}: ${post.title}`;
@@ -376,16 +415,14 @@ export function PostCard({ post }: PostCardProps) {
       return;
     }
 
-    if (platform === 'twitter') {
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-    } else if (platform === 'facebook') {
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-    } else if (platform === 'linkedin') {
-      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
-    } else if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+    if (platform === 'native' && (navigator as any)?.share) {
+      try {
+        await (navigator as any).share({ title: post.title, text, url });
+        setShowShareDialog(false);
+      } catch {
+        // user cancelled
+      }
     }
-    setShowShareDialog(false);
   };
 
   const handleSave = async () => {
@@ -604,6 +641,7 @@ export function PostCard({ post }: PostCardProps) {
                 size="sm"
                 className={`w-full ${userReaction ? selectedReactionColor : ''}`}
                 onClick={() => setShowReactionPicker(!showReactionPicker)}
+                disabled={isReacting}
               >
                 <SelectedReactionIcon className="w-4 h-4 mr-2" />
                 <span className="text-xs">
@@ -622,6 +660,7 @@ export function PostCard({ post }: PostCardProps) {
                         size="sm"
                         className={`flex flex-col items-center gap-1 hover:bg-accent ${reaction.color}`}
                         onClick={() => handleReaction(reaction.type)}
+                        disabled={isReacting}
                       >
                         <Icon className="w-5 h-5" />
                         <span className="text-xs">{reaction.label}</span>
@@ -654,7 +693,7 @@ export function PostCard({ post }: PostCardProps) {
               </Button>
             )}
             
-            <Button variant="ghost" size="sm" className="flex-1">
+            <Button variant="ghost" size="sm" className="flex-1" onClick={openShareDialog}>
               <Share2 className="w-4 h-4 mr-2" />
               Share
             </Button>
@@ -774,6 +813,64 @@ export function PostCard({ post }: PostCardProps) {
                 Close
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Share Dialog */}
+        <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Share2 className="w-5 h-5" />
+                Share this post
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input readOnly value={shareUrl} />
+                <Button variant="outline" onClick={() => handleShare('copy')}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <a
+                  className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Twitter className="w-4 h-4" /> X
+                </a>
+                <a
+                  className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Facebook className="w-4 h-4" /> Facebook
+                </a>
+                <a
+                  className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Linkedin className="w-4 h-4" /> LinkedIn
+                </a>
+                <a
+                  className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                  href={`https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Whatsapp className="w-4 h-4" /> WhatsApp
+                </a>
+              </div>
+              <Button variant="secondary" onClick={() => handleShare('native')}>
+                Use device share
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </Card>
@@ -982,6 +1079,7 @@ export function PostCard({ post }: PostCardProps) {
               size="sm"
               className={`w-full ${userReaction ? selectedReactionColor : ''}`}
               onClick={() => setShowReactionPicker(!showReactionPicker)}
+              disabled={isReacting}
             >
               <SelectedReactionIcon className="w-4 h-4 mr-2" />
               <span className="text-xs">
@@ -1000,6 +1098,7 @@ export function PostCard({ post }: PostCardProps) {
                       size="sm"
                       className={`flex flex-col items-center gap-1 hover:bg-accent ${reaction.color}`}
                       onClick={() => handleReaction(reaction.type)}
+                      disabled={isReacting}
                     >
                       <Icon className="w-5 h-5" />
                       <span className="text-xs">{reaction.label}</span>
@@ -1032,7 +1131,7 @@ export function PostCard({ post }: PostCardProps) {
             </Button>
           )}
           
-          <Button variant="ghost" size="sm" className="flex-1">
+          <Button variant="ghost" size="sm" className="flex-1" onClick={openShareDialog}>
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
@@ -1152,6 +1251,64 @@ export function PostCard({ post }: PostCardProps) {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="w-5 h-5" />
+              Share this post
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input readOnly value={shareUrl} />
+              <Button variant="outline" onClick={() => handleShare('copy')}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <a
+                className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Twitter className="w-4 h-4" /> X
+              </a>
+              <a
+                className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Facebook className="w-4 h-4" /> Facebook
+              </a>
+              <a
+                className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Linkedin className="w-4 h-4" /> LinkedIn
+              </a>
+              <a
+                className="flex items-center justify-center gap-2 border rounded-md py-2 hover:bg-accent"
+                href={`https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Whatsapp className="w-4 h-4" /> WhatsApp
+              </a>
+            </div>
+            <Button variant="secondary" onClick={() => handleShare('native')}>
+              Use device share
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
