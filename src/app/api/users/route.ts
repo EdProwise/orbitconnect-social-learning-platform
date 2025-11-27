@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
         class: users.class,
         schoolHistory: users.schoolHistory,
         aboutYourself: users.aboutYourself,
+        teachingExperience: users.teachingExperience,
+        skills: users.skills,
+        teachingSubjects: users.teachingSubjects,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -58,6 +61,9 @@ export async function GET(request: NextRequest) {
         ...userData,
         socialMediaLinks: userData.socialMediaLinks ? JSON.parse(userData.socialMediaLinks as string) : null,
         schoolHistory: userData.schoolHistory ? JSON.parse(userData.schoolHistory as string) : null,
+        teachingExperience: userData.teachingExperience ? JSON.parse(userData.teachingExperience as string) : null,
+        skills: userData.skills ? JSON.parse(userData.skills as string) : null,
+        teachingSubjects: userData.teachingSubjects ? JSON.parse(userData.teachingSubjects as string) : null,
       });
     }
 
@@ -119,6 +125,9 @@ export async function GET(request: NextRequest) {
       class: users.class,
       schoolHistory: users.schoolHistory,
       aboutYourself: users.aboutYourself,
+      teachingExperience: users.teachingExperience,
+      skills: users.skills,
+      teachingSubjects: users.teachingSubjects,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -133,6 +142,9 @@ export async function GET(request: NextRequest) {
       ...user,
       socialMediaLinks: user.socialMediaLinks ? JSON.parse(user.socialMediaLinks as string) : null,
       schoolHistory: user.schoolHistory ? JSON.parse(user.schoolHistory as string) : null,
+      teachingExperience: user.teachingExperience ? JSON.parse(user.teachingExperience as string) : null,
+      skills: user.skills ? JSON.parse(user.skills as string) : null,
+      teachingSubjects: user.teachingSubjects ? JSON.parse(user.teachingSubjects as string) : null,
     }));
 
     return NextResponse.json(parsedResults);
@@ -456,7 +468,7 @@ export async function PATCH(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    // Validate and update teachingExperience
+    // Validate and update teachingExperience (relaxed validation to match UI)
     if (teachingExperience !== undefined) {
       if (teachingExperience !== null) {
         if (!Array.isArray(teachingExperience)) {
@@ -466,25 +478,20 @@ export async function PATCH(request: NextRequest) {
           }, { status: 400 });
         }
 
-        // Validate each experience object
-        for (let i = 0; i < teachingExperience.length; i++) {
-          const exp = teachingExperience[i];
-          if (!exp.schoolName || !exp.designation || !exp.teachingLevel || !exp.from || !exp.to) {
-            return NextResponse.json({ 
-              error: `Teaching experience at index ${i} must have schoolName, designation, teachingLevel, from, and to`,
-              code: "INVALID_EXPERIENCE_STRUCTURE" 
-            }, { status: 400 });
-          }
+        // Keep entries that have at least schoolName or designation; other fields optional
+        const sanitized = teachingExperience
+          .filter((exp: any) => exp && (exp.schoolName || exp.designation || exp.teachingLevel || exp.from || exp.to))
+          .map((exp: any) => ({
+            schoolName: exp.schoolName?.toString().trim() || '',
+            designation: exp.designation?.toString().trim() || '',
+            teachingLevel: exp.teachingLevel?.toString().trim() || '',
+            from: exp.from?.toString().trim() || '',
+            to: exp.to?.toString().trim() || '',
+          }))
+          // Remove rows that are entirely empty after trimming
+          .filter((exp: any) => exp.schoolName || exp.designation || exp.teachingLevel || exp.from || exp.to);
 
-          if (!VALID_TEACHING_LEVELS.includes(exp.teachingLevel)) {
-            return NextResponse.json({ 
-              error: `Invalid teachingLevel at index ${i}. Must be one of: ${VALID_TEACHING_LEVELS.join(', ')}`,
-              code: "INVALID_TEACHING_LEVEL" 
-            }, { status: 400 });
-          }
-        }
-
-        updates.teachingExperience = JSON.stringify(teachingExperience);
+        updates.teachingExperience = sanitized.length > 0 ? JSON.stringify(sanitized) : null;
       } else {
         updates.teachingExperience = null;
       }
@@ -501,7 +508,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         // Validate all items are strings
-        if (!skills.every(skill => typeof skill === 'string')) {
+        if (!skills.every((skill: any) => typeof skill === 'string')) {
           return NextResponse.json({ 
             error: "All skills must be strings",
             code: "INVALID_SKILL_TYPE" 
@@ -525,7 +532,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         // Validate all items are strings
-        if (!teachingSubjects.every(subject => typeof subject === 'string')) {
+        if (!teachingSubjects.every((subject: any) => typeof subject === 'string')) {
           return NextResponse.json({ 
             error: "All teaching subjects must be strings",
             code: "INVALID_SUBJECT_TYPE" 
