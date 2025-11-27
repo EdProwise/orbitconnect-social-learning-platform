@@ -34,7 +34,6 @@ import {
   Twitter,
   Facebook,
   Linkedin,
-  Whatsapp,
   Copy
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -310,9 +309,15 @@ export function PostCard({ post }: PostCardProps) {
       return;
     }
 
+    // Enforce single reaction per user per post (no duplicate same-type submits)
+    if (userReaction === type) {
+      setShowReactionPicker(false);
+      return;
+    }
+
     try {
       setIsReacting(true);
-      // Optimistic update
+      // Optimistic update (replace existing user reaction or add new)
       setUserReaction(type);
       setShowReactionPicker(false);
       setReactions((prev) => {
@@ -839,6 +844,7 @@ export function PostCard({ post }: PostCardProps) {
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setShowShareDialog(false)}
                 >
                   <Twitter className="w-4 h-4" /> X
                 </a>
@@ -847,6 +853,7 @@ export function PostCard({ post }: PostCardProps) {
                   href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setShowShareDialog(false)}
                 >
                   <Facebook className="w-4 h-4" /> Facebook
                 </a>
@@ -855,6 +862,7 @@ export function PostCard({ post }: PostCardProps) {
                   href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setShowShareDialog(false)}
                 >
                   <Linkedin className="w-4 h-4" /> LinkedIn
                 </a>
@@ -863,8 +871,9 @@ export function PostCard({ post }: PostCardProps) {
                   href={`https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setShowShareDialog(false)}
                 >
-                  <Whatsapp className="w-4 h-4" /> WhatsApp
+                  <MessageCircle className="w-4 h-4" /> WhatsApp
                 </a>
               </div>
               <Button variant="secondary" onClick={() => handleShare('native')}>
@@ -1277,6 +1286,7 @@ export function PostCard({ post }: PostCardProps) {
                 href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => setShowShareDialog(false)}
               >
                 <Twitter className="w-4 h-4" /> X
               </a>
@@ -1285,6 +1295,7 @@ export function PostCard({ post }: PostCardProps) {
                 href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => setShowShareDialog(false)}
               >
                 <Facebook className="w-4 h-4" /> Facebook
               </a>
@@ -1293,6 +1304,7 @@ export function PostCard({ post }: PostCardProps) {
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => setShowShareDialog(false)}
               >
                 <Linkedin className="w-4 h-4" /> LinkedIn
               </a>
@@ -1301,8 +1313,9 @@ export function PostCard({ post }: PostCardProps) {
                 href={`https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => setShowShareDialog(false)}
               >
-                <Whatsapp className="w-4 h-4" /> WhatsApp
+                <MessageCircle className="w-4 h-4" /> WhatsApp
               </a>
             </div>
             <Button variant="secondary" onClick={() => handleShare('native')}>
