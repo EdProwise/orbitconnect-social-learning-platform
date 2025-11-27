@@ -149,6 +149,9 @@ export default function SettingsPage() {
       const updatedUser = { ...user, ...profileForm };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
+      // Set flag to notify profile page to refetch
+      localStorage.setItem('profileNeedsRefetch', 'true');
+      
       // Dispatch custom event to notify profile page
       window.dispatchEvent(new CustomEvent('profileUpdated'));
     } catch (error) {

@@ -136,6 +136,15 @@ export default function ProfilePage() {
     }
   }, [userId, profile?.role]);
 
+  // Check for refetch flag on mount and when navigating back
+  useEffect(() => {
+    const needsRefetch = localStorage.getItem('profileNeedsRefetch');
+    if (needsRefetch === 'true' && userId) {
+      fetchProfile();
+      localStorage.removeItem('profileNeedsRefetch');
+    }
+  }, [userId]);
+
   // Listen for storage events to refetch when settings are updated
   useEffect(() => {
     const handleStorageChange = () => {
