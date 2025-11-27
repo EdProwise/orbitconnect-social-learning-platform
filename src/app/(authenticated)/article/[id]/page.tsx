@@ -24,7 +24,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { apiRequest } from '@/lib/api-client';
+import { apiRequest, ApiError, authApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 interface Post {
@@ -75,19 +75,62 @@ export default function ArticlePage() {
   const [reactions, setReactions] = useState<any[]>([]);
   const [userReaction, setUserReaction] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [savedRecordId, setSavedRecordId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [knowledgePoints, setKnowledgePoints] = useState(0);
   const [userKnowledgePoints, setUserKnowledgePoints] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
   const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+
+  useEffect(() => {
+    // Resolve current user id for saved/unsave actions
+    const resolveUser = async () => {
+      try {
+        if (currentUser?.id) {
+          setCurrentUserId(currentUser.id);
+          return;
+        }
+        const me = await authApi.getCurrentUser();
+        if ((me as any)?.id) setCurrentUserId((me as any).id);
+      } catch {
+        // ignore
+      }
+    };
+    resolveUser();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (postId) {
       fetchPost();
     }
   }, [postId]);
+
+  useEffect(() => {
+    // Initialize saved state when we have both ids
+    if (!postId || currentUserId == null) return;
+    refreshSavedStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId, currentUserId]);
+
+  const refreshSavedStatus = async () => {
+    try {
+      const result = await apiRequest<any[]>(`/api/saved-posts?userId=${currentUserId}&postId=${postId}&limit=1`, { method: 'GET' });
+      if (Array.isArray(result) && result.length > 0) {
+        setIsSaved(true);
+        setSavedRecordId(result[0].id);
+      } else {
+        setIsSaved(false);
+        setSavedRecordId(null);
+      }
+    } catch (e) {
+      // do nothing
+    }
+  };
 
   const fetchPost = async () => {
     setIsLoadingPost(true);
@@ -193,9 +236,9 @@ export default function ArticlePage() {
     } catch (error: any) {
       console.error('Failed to award knowledge points:', error);
       
-      if (error.message && error.message.includes('already awarded')) {
+      if ((error as any).message && (error as any).message.includes('already awarded')) {
         toast.error('You have already reached the maximum points for this post');
-      } else if (error.message && error.message.includes('your own post')) {
+      } else if ((error as any).message && (error as any).message.includes('your own post')) {
         toast.error('You cannot award points to your own post');
       } else {
         toast.error('Failed to award knowledge points');
@@ -246,21 +289,43 @@ export default function ArticlePage() {
   };
 
   const handleSave = async () => {
+    if (currentUserId == null) {
+      toast.error('Please log in to save posts');
+      return;
+    }
+    if (isSaving) return;
+    setIsSaving(true);
+
     try {
-      if (isSaved) {
-        // TODO: Unsave post
+      if (isSaved && savedRecordId != null) {
+        // Unsave: delete the saved record by id
+        await apiRequest(`/api/saved-posts?id=${savedRecordId}`, { method: 'DELETE' });
+        toast.success('Removed from saved');
       } else {
+        // Save: create saved record
         await apiRequest('/api/saved-posts', {
           method: 'POST',
           body: JSON.stringify({
-            userId: currentUser?.id || 5,
+            userId: currentUserId,
             postId: parseInt(postId),
           }),
         });
+        toast.success('Saved');
       }
-      setIsSaved(!isSaved);
     } catch (error) {
-      console.error('Failed to save post:', error);
+      const err = error as ApiError;
+      if (err?.code === 'DUPLICATE_SAVE') {
+        // Already saved; ensure state reflects it
+        toast.message?.('Already saved');
+      } else {
+        console.error('Failed to toggle save:', error);
+        toast.error('Failed to update saved state');
+      }
+    } finally {
+      // Refresh status and notify Saved page
+      await refreshSavedStatus();
+      window.dispatchEvent(new Event('savedPostsUpdated'));
+      setIsSaving(false);
     }
   };
 
@@ -433,6 +498,7 @@ export default function ArticlePage() {
               size="sm" 
               className="flex-1"
               onClick={handleSave}
+              disabled={isSaving}
             >
               <Bookmark className={`w-4 h-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
               {isSaved ? 'Saved' : 'Save'}

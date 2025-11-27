@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PostCard } from '@/components/feed/post-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bookmark } from 'lucide-react';
-import { apiRequest } from '@/lib/api-client';
+import { apiRequest, authApi } from '@/lib/api-client';
 
 interface SavedPost {
   id: number;
@@ -17,38 +17,67 @@ interface SavedPost {
 export default function SavedPage() {
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const currentUserId = 5; // TODO: Get from auth context
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchSavedPosts();
+    // Resolve current user id from localStorage first, then fallback to /api/auth/me
+    const resolveUser = async () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.id) {
+            setCurrentUserId(user.id);
+            return;
+          }
+        }
+        const me = await authApi.getCurrentUser();
+        if ((me as any)?.user?.id) setCurrentUserId((me as any).user.id);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    resolveUser();
   }, []);
 
-  const fetchSavedPosts = async () => {
-    try {
-      setIsLoading(true);
-      const savedData = await apiRequest(
-        `/api/saved-posts?userId=${currentUserId}&limit=50`,
-        { method: 'GET' }
-      );
+  useEffect(() => {
+    if (currentUserId == null) return;
 
-      // Fetch actual post data for each saved post
-      const posts = await Promise.all(
-        savedData.map(async (saved: SavedPost) => {
-          try {
-            return await apiRequest(`/api/posts?id=${saved.postId}`, { method: 'GET' });
-          } catch (error) {
-            return null;
-          }
-        })
-      );
+    const fetchSavedPosts = async () => {
+      try {
+        setIsLoading(true);
+        const savedData = await apiRequest(
+          `/api/saved-posts?userId=${currentUserId}&limit=50`,
+          { method: 'GET' }
+        );
 
-      setSavedPosts(posts.filter(p => p !== null));
-    } catch (error) {
-      console.error('Failed to fetch saved posts:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        // Fetch actual post data for each saved post
+        const posts = await Promise.all(
+          (savedData as SavedPost[]).map(async (saved: SavedPost) => {
+            try {
+              return await apiRequest(`/api/posts?id=${saved.postId}`, { method: 'GET' });
+            } catch (error) {
+              return null;
+            }
+          })
+        );
+
+        setSavedPosts(posts.filter(p => p !== null));
+      } catch (error) {
+        console.error('Failed to fetch saved posts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSavedPosts();
+
+    // Listen for updates coming from other pages (e.g., when a post is saved)
+    const onSavedUpdated = () => fetchSavedPosts();
+    window.addEventListener('savedPostsUpdated', onSavedUpdated as EventListener);
+    return () => window.removeEventListener('savedPostsUpdated', onSavedUpdated as EventListener);
+  }, [currentUserId]);
 
   return (
     <div className="space-y-6">
