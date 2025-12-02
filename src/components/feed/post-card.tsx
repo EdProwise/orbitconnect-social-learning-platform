@@ -141,10 +141,11 @@ export function PostCard({ post }: PostCardProps) {
     initSavedState();
   }, [post.id]);
 
-  // When reactions or user changes, set user's current reaction for this post
+  // When reactions or user changes, set user's current reaction for this post (normalize ID types)
   useEffect(() => {
     if (!currentUser?.id) return;
-    const mine = reactions.find((r) => r.userId === currentUser.id);
+    const uid = Number(currentUser.id);
+    const mine = reactions.find((r) => Number(r.userId) === uid);
     setUserReaction(mine?.type ?? null);
   }, [reactions, currentUser?.id]);
 
@@ -321,7 +322,7 @@ export function PostCard({ post }: PostCardProps) {
       setUserReaction(type);
       setShowReactionPicker(false);
       setReactions((prev) => {
-        const mineIndex = prev.findIndex((r) => r.userId === user.id && r.postId === post.id);
+        const mineIndex = prev.findIndex((r) => Number(r.userId) === user.id && r.postId === post.id);
         if (mineIndex >= 0) {
           const copy = [...prev];
           copy[mineIndex] = { ...copy[mineIndex], type };

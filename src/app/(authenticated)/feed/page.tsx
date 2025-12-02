@@ -7,6 +7,7 @@ import { CourseFeedCard } from '@/components/feed/course-feed-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 interface Post {
   id: number;
@@ -48,6 +49,7 @@ export default function FeedPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     fetchFeed();
@@ -71,6 +73,16 @@ export default function FeedPage() {
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
+
+  useEffect(() => {
+    // If quick action opened with compose=true, scroll composer into view
+    if (searchParams?.get('compose') === 'true') {
+      const el = document.getElementById('post-composer');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [searchParams]);
 
   const fetchFeed = async () => {
     try {

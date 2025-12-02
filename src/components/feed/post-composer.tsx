@@ -59,7 +59,7 @@ export function PostComposer() {
   };
 
   return (
-    <Card>
+    <Card id="post-composer">
       <CardContent className="p-6">
         <div className="flex items-center gap-3 mb-4">
           <Avatar className="w-12 h-12">
