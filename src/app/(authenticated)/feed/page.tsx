@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { PostComposer } from '@/components/feed/post-composer';
 import { PostCard } from '@/components/feed/post-card';
+import { CourseFeedCard } from '@/components/feed/course-feed-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -20,24 +21,46 @@ interface Post {
   createdAt: string;
 }
 
+interface Course {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  instructorId: number;
+  category: string;
+  thumbnail: string | null;
+  durationHours: number | null;
+  level: string;
+  price: number;
+  enrolledCount: number;
+  rating: number;
+  createdAt: string;
+}
+
+interface FeedItem {
+  type: 'post' | 'course';
+  data: Post | Course;
+  createdAt: string;
+}
+
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchPosts();
+    fetchFeed();
 
-    // Refetch posts when the page becomes visible (user returns from creating a post)
+    // Refetch when the page becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        fetchPosts();
+        fetchFeed();
       }
     };
 
-    // Refetch posts when window regains focus
     const handleFocus = () => {
-      fetchPosts();
+      fetchFeed();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -49,15 +72,24 @@ export default function FeedPage() {
     };
   }, []);
 
-  const fetchPosts = async () => {
+  const fetchFeed = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/posts?limit=20');
-      if (!response.ok) throw new Error('Failed to fetch posts');
-      const data = await response.json();
-      setPosts(data);
+      const [postsResponse, coursesResponse] = await Promise.all([
+        fetch('/api/posts?limit=20'),
+        fetch('/api/courses?limit=10'),
+      ]);
+      
+      if (!postsResponse.ok) throw new Error('Failed to fetch posts');
+      if (!coursesResponse.ok) throw new Error('Failed to fetch courses');
+      
+      const postsData = await postsResponse.json();
+      const coursesData = await coursesResponse.json();
+      
+      setPosts(postsData);
+      setCourses(coursesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load posts');
+      setError(err instanceof Error ? err.message : 'Failed to load feed');
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +98,12 @@ export default function FeedPage() {
   const handlePostCreated = (newPost: Post) => {
     setPosts([newPost, ...posts]);
   };
+
+  // Combine posts and courses into a single feed, sorted by creation date
+  const feedItems: FeedItem[] = [
+    ...posts.map((post) => ({ type: 'post' as const, data: post, createdAt: post.createdAt })),
+    ...courses.map((course) => ({ type: 'course' as const, data: course, createdAt: course.createdAt })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="space-y-6">
@@ -98,15 +136,19 @@ export default function FeedPage() {
           ))}
         </div>
       ) : (
-        /* Posts Feed */
+        /* Combined Feed */
         <div className="space-y-4">
-          {posts.length === 0 ? (
+          {feedItems.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              No posts yet. Be the first to share something!
+              No posts or courses yet. Be the first to share something!
             </div>
           ) : (
-            posts.map((post) => (
-              <PostCard key={post.id} post={post} />
+            feedItems.map((item, index) => (
+              item.type === 'post' ? (
+                <PostCard key={`post-${item.data.id}`} post={item.data as Post} />
+              ) : (
+                <CourseFeedCard key={`course-${item.data.id}`} course={item.data as Course} />
+              )
             ))
           )}
         </div>

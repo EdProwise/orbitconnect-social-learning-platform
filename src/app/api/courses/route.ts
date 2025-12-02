@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { courses, users } from '@/db/schema';
+import { courses, users, courseEnrollments } from '@/db/schema';
 import { eq, like, and, or, desc } from 'drizzle-orm';
 
 const VALID_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'] as const;
@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
+    const userId = searchParams.get('userId');
 
     // Single course by ID
     if (id) {
@@ -31,7 +32,44 @@ export async function GET(request: NextRequest) {
         }, { status: 404 });
       }
 
-      return NextResponse.json(course[0], { status: 200 });
+      const courseData = course[0];
+
+      // Check if course is free (price = 0) or if user has enrolled or is the instructor
+      let hasAccess = false;
+      const isFree = courseData.price === 0;
+      const isInstructor = userId && parseInt(userId) === courseData.instructorId;
+      
+      if (userId && !isNaN(parseInt(userId))) {
+        const enrollment = await db.select()
+          .from(courseEnrollments)
+          .where(
+            and(
+              eq(courseEnrollments.courseId, parseInt(id)),
+              eq(courseEnrollments.userId, parseInt(userId))
+            )
+          )
+          .limit(1);
+        
+        hasAccess = enrollment.length > 0;
+      }
+
+      // Build response with conditional videoUrl access
+      const response: any = { ...courseData };
+      
+      // If userId provided, check enrollment status, course price, and instructor status
+      if (userId) {
+        if (hasAccess || isFree || isInstructor) {
+          // User is enrolled OR course is free OR user is the instructor - show videoUrl
+          response.hasAccess = true;
+        } else {
+          // User is NOT enrolled AND course is paid AND not instructor - hide videoUrl
+          response.videoUrl = null;
+          response.hasAccess = false;
+        }
+      }
+      // If no userId provided, show full data (admin view)
+
+      return NextResponse.json(response, { status: 200 });
     }
 
     // List courses with pagination, search, and filtering
@@ -44,7 +82,6 @@ export async function GET(request: NextRequest) {
     const schoolId = searchParams.get('schoolId');
 
     let query = db.select().from(courses);
-
     const conditions = [];
 
     // Search by title or description
@@ -85,12 +122,19 @@ export async function GET(request: NextRequest) {
       query = query.where(and(...conditions));
     }
 
-    const results = await query
+    const results = await db.select().from(courses)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(courses.createdAt))
       .limit(limit)
       .offset(offset);
 
-    return NextResponse.json(results, { status: 200 });
+    // For list view, hide videoUrl for all courses (require individual course fetch with userId)
+    const sanitizedResults = results.map(course => ({
+      ...course,
+      videoUrl: null, // Hide video URLs in list view for security
+    }));
+
+    return NextResponse.json(sanitizedResults, { status: 200 });
 
   } catch (error) {
     console.error('GET error:', error);
@@ -110,7 +154,8 @@ export async function POST(request: NextRequest) {
       instructorId, 
       schoolId, 
       category, 
-      thumbnail, 
+      thumbnail,
+      videoUrl,
       durationHours, 
       level, 
       price 
@@ -210,6 +255,7 @@ export async function POST(request: NextRequest) {
       schoolId: schoolId ? parseInt(schoolId) : null,
       category: category.trim(),
       thumbnail: thumbnail ? thumbnail.trim() : null,
+      videoUrl: videoUrl ? videoUrl.trim() : null,
       durationHours: durationHours ? parseInt(durationHours) : null,
       level,
       price: parseFloat(price),
@@ -266,7 +312,8 @@ export async function PUT(request: NextRequest) {
       instructorId, 
       schoolId, 
       category, 
-      thumbnail, 
+      thumbnail,
+      videoUrl,
       durationHours, 
       level, 
       price,
@@ -332,6 +379,7 @@ export async function PUT(request: NextRequest) {
     if (schoolId !== undefined) updateData.schoolId = schoolId ? parseInt(schoolId) : null;
     if (category !== undefined) updateData.category = category.trim();
     if (thumbnail !== undefined) updateData.thumbnail = thumbnail ? thumbnail.trim() : null;
+    if (videoUrl !== undefined) updateData.videoUrl = videoUrl ? videoUrl.trim() : null;
     if (durationHours !== undefined) updateData.durationHours = durationHours ? parseInt(durationHours) : null;
     if (level !== undefined) updateData.level = level;
     if (price !== undefined) updateData.price = parseFloat(price);

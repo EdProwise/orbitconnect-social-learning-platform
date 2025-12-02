@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, BookOpen, Clock, Users, Star, TrendingUp } from 'lucide-react';
+import { Search, BookOpen, Clock, Users, Star, Upload } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 
 interface Course {
@@ -32,6 +32,10 @@ export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLevel, setSelectedLevel] = useState('all');
+
+  // Get current user
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+  const isTeacher = currentUser.role === 'TEACHER';
 
   useEffect(() => {
     fetchCourses();
@@ -66,10 +70,14 @@ export default function CoursesPage() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold font-poppins">Courses</h1>
-          <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white">
-            <BookOpen className="w-4 h-4 mr-2" />
-            Create Course
-          </Button>
+          {isTeacher && (
+            <Link href="/courses/upload">
+              <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Course
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Filters */}

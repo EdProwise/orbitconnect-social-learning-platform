@@ -92,6 +92,7 @@ export const courses = sqliteTable('courses', {
   schoolId: integer('school_id').references(() => schools.id),
   category: text('category').notNull(),
   thumbnail: text('thumbnail'),
+  videoUrl: text('video_url'),
   durationHours: integer('duration_hours'),
   level: text('level').notNull(), // 'BEGINNER'|'INTERMEDIATE'|'ADVANCED'
   price: real('price').notNull(),
