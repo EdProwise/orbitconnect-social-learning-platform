@@ -25,7 +25,7 @@ export function LeftSidebar({ user }: LeftSidebarProps) {
 
   const navigationItems = [
     { name: 'Home', href: '/feed', icon: Home },
-    { name: 'Mentorship', href: '/teachers', icon: UserCheck },
+    { name: 'Collegues', href: '/teachers', icon: UserCheck },
     // Only show "Meet GenZ" for students
     ...(user.role === 'STUDENT' ? [{ name: 'Meet GenZ', href: '/profiles', icon: Users }] : []),
     { name: 'Discover School', href: '/schools', icon: School },
