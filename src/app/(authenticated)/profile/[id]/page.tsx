@@ -46,7 +46,7 @@ import {
   UserCheck,
   UserMinus,
 } from 'lucide-react';
-import { apiRequest } from '@/lib/api-client';
+import { apiRequest, authApi } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -126,14 +126,30 @@ export default function ProfilePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
 
-  // Get current user
+  // Resolve current user from auth (preferred) with localStorage fallback
+  const [currentUserInfo, setCurrentUserInfo] = useState<{ id: number; role: string } | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const me = await authApi.getCurrentUser();
+        if (mounted && me?.id) {
+          setCurrentUserInfo({ id: me.id, role: me.role });
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-  const isOwnProfile = currentUser.id === parseInt(userId);
+  const safeCurrentUserId = Number(currentUserInfo?.id ?? currentUser?.id);
+  const safeCurrentUserRole: string | undefined = currentUserInfo?.role ?? currentUser?.role;
+  const isOwnProfile = safeCurrentUserId === parseInt(userId);
   const isTeacher = profile?.role === 'TEACHER';
   const isStudent = profile?.role === 'STUDENT';
   
   // Check if current user can connect with this profile
-  const canConnect = isStudent && currentUser.role === 'STUDENT' && !isOwnProfile;
+  const canConnect = isStudent && safeCurrentUserRole === 'STUDENT' && !isOwnProfile;
   const canFollow = isTeacher && !isOwnProfile;
 
   useEffect(() => {
@@ -180,10 +196,10 @@ export default function ProfilePage() {
     try {
       const [followersData, followStatusData] = await Promise.all([
         apiRequest(`/api/follows?followingId=${userId}`, { method: 'GET' }),
-        !isOwnProfile ? apiRequest(`/api/follows/status?followerId=${currentUser.id}&followingId=${userId}`, { method: 'GET' }) : Promise.resolve({ isFollowing: false }),
+        !isOwnProfile && safeCurrentUserId ? apiRequest(`/api/follows/status?followerId=${safeCurrentUserId}&followingId=${userId}`, { method: 'GET' }) : Promise.resolve({ isFollowing: false }),
       ]);
       setFollowerCount(followersData.length || 0);
-      setIsFollowing(followStatusData.isFollowing || false);
+      setIsFollowing((followStatusData as any).isFollowing || false);
     } catch (error) {
       console.error('Failed to fetch follow stats:', error);
     }
@@ -232,7 +248,7 @@ export default function ProfilePage() {
       }
 
       // Check connection status if viewing another student's profile
-      if (!isOwnProfile && currentUser.role === 'STUDENT' && profileData.role === 'STUDENT') {
+      if (!isOwnProfile && safeCurrentUserRole === 'STUDENT' && profileData.role === 'STUDENT') {
         await checkConnectionStatus();
       }
     } catch (error) {
@@ -245,24 +261,23 @@ export default function ProfilePage() {
 
   const checkConnectionStatus = async () => {
     try {
-      // Check if there's a connection between current user and profile user
-      const allConnections = await apiRequest(
-        `/api/connections?limit=100`,
-        { method: 'GET' }
-      );
+      if (!safeCurrentUserId) return;
+      // Query only the two possible directions between the two users (much faster)
+      const [aToB, bToA] = await Promise.all([
+        apiRequest(`/api/connections?requesterId=${safeCurrentUserId}&receiverId=${userId}`, { method: 'GET' }),
+        apiRequest(`/api/connections?requesterId=${userId}&receiverId=${safeCurrentUserId}`, { method: 'GET' }),
+      ]);
 
-      // Find connection between these two users (in either direction)
-      const connection = allConnections.find((conn: any) =>
-        (conn.requesterId === currentUser.id && conn.receiverId === parseInt(userId)) ||
-        (conn.receiverId === currentUser.id && conn.requesterId === parseInt(userId))
-      );
+      const listA = (aToB as any[]) || [];
+      const listB = (bToA as any[]) || [];
+      const connection = [...listA, ...listB][0];
 
       if (connection) {
         setConnectionId(connection.id);
         if (connection.status === 'ACCEPTED') {
           setConnectionStatus('connected');
         } else if (connection.status === 'PENDING') {
-          if (connection.requesterId === currentUser.id) {
+          if (connection.requesterId === safeCurrentUserId) {
             setConnectionStatus('pending_sent');
           } else {
             setConnectionStatus('pending_received');
@@ -279,7 +294,7 @@ export default function ProfilePage() {
 
   const handleConnect = async () => {
     // Prevent teachers and schools from connecting with students
-    if (currentUser.role === 'TEACHER' || currentUser.role === 'SCHOOL') {
+    if (safeCurrentUserRole === 'TEACHER' || safeCurrentUserRole === 'SCHOOL') {
       toast.error('Only students can send connection requests');
       return;
     }
@@ -288,14 +303,20 @@ export default function ProfilePage() {
       await apiRequest('/api/connections', {
         method: 'POST',
         body: JSON.stringify({
-          requesterId: currentUser.id,
+          requesterId: safeCurrentUserId,
           receiverId: parseInt(userId),
         }),
       });
       setConnectionStatus('pending_sent');
       toast.success('Connection request sent!');
       await checkConnectionStatus();
-    } catch (error) {
+    } catch (error: any) {
+      // If duplicate, refresh status quickly instead of showing generic error
+      if (error?.code === 'DUPLICATE_CONNECTION') {
+        await checkConnectionStatus();
+        toast.info('Connection request already exists');
+        return;
+      }
       console.error('Failed to send connection request:', error);
       toast.error('Failed to send connection request');
     }
@@ -354,7 +375,7 @@ export default function ProfilePage() {
   const handleFollow = async () => {
     try {
       if (isFollowing) {
-        await apiRequest(`/api/follows?followerId=${currentUser.id}&followingId=${userId}`, {
+        await apiRequest(`/api/follows?followerId=${safeCurrentUserId}&followingId=${userId}`, {
           method: 'DELETE',
         });
         setIsFollowing(false);
@@ -364,7 +385,7 @@ export default function ProfilePage() {
         await apiRequest('/api/follows', {
           method: 'POST',
           body: JSON.stringify({
-            followerId: currentUser.id,
+            followerId: safeCurrentUserId,
             followingId: parseInt(userId),
           }),
         });
