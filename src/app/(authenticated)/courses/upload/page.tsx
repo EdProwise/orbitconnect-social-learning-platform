@@ -25,7 +25,6 @@ export default function UploadCoursePage() {
     description: '',
     category: '',
     level: 'BEGINNER',
-    price: '0',
     durationHours: '',
   });
 
@@ -127,12 +126,6 @@ export default function UploadCoursePage() {
       return;
     }
 
-    const price = parseFloat(formData.price);
-    if (isNaN(price) || price < 0) {
-      toast.error('Please enter a valid price (0 or greater)');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
@@ -152,7 +145,7 @@ export default function UploadCoursePage() {
         thumbnail: thumbnailPreview || null,
         durationHours: formData.durationHours ? parseInt(formData.durationHours) : null,
         level: formData.level,
-        price: price,
+        price: 0,
         videoUrl: videoPreview, // In production, upload to storage service
         enrolledCount: 0,
         rating: 0,
@@ -265,8 +258,8 @@ export default function UploadCoursePage() {
               </div>
             </div>
 
-            {/* Duration and Price */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Duration */}
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="duration">Duration (hours)</Label>
                 <Input
@@ -280,24 +273,6 @@ export default function UploadCoursePage() {
                   disabled={isLoading}
                   className="h-11"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="price">Price (USD) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="0 for free course"
-                  disabled={isLoading}
-                  className="h-11"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Set to 0 for free course. Free courses are accessible to all users.
-                </p>
               </div>
             </div>
 
@@ -415,8 +390,7 @@ export default function UploadCoursePage() {
               <div className="text-sm text-blue-900 dark:text-blue-100">
                 <p className="font-medium mb-1">Course Visibility</p>
                 <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
-                  <li>Free courses (price = $0): Accessible to all users without payment</li>
-                  <li>Paid courses: Users must purchase before accessing video content</li>
+                  <li>All courses uploaded by teachers are free and accessible to all users</li>
                   <li>Your course will appear in the feed once published</li>
                 </ul>
               </div>
