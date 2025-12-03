@@ -105,6 +105,13 @@ const isPdfUrl = (url: string): boolean => {
   return url.toLowerCase().includes('pdf') || url.startsWith('data:application/pdf');
 };
 
+// Helper function to check if URL is a video
+const isVideoUrl = (url: string): boolean => {
+  const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.ogg', '.mkv'];
+  const lowerUrl = url.toLowerCase();
+  return videoExtensions.some(ext => lowerUrl.includes(ext)) || url.startsWith('data:video');
+};
+
 // Helper function to get file name from URL
 const getFileName = (url: string, index: number): string => {
   if (url.startsWith('data:')) {
@@ -996,16 +1003,32 @@ export function PostCard({ post }: PostCardProps) {
             {/* Media */}
             {post.mediaUrls && post.mediaUrls.length > 0 && (
               <div className={`grid gap-2 ${post.mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                {post.mediaUrls.slice(0, 4).map((url, index) => (
-                  <div 
-                    key={index} 
-                    className={`rounded-lg overflow-hidden bg-muted ${
-                      post.mediaUrls!.length === 1 ? 'aspect-video' : 'aspect-square'
-                    }`}
-                  >
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ))}
+                {post.mediaUrls.slice(0, 4).map((url, index) => {
+                  const isVideo = isVideoUrl(url);
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`rounded-lg overflow-hidden bg-muted ${
+                        post.mediaUrls!.length === 1 ? 'aspect-video' : 'aspect-square'
+                      }`}
+                    >
+                      {isVideo ? (
+                        <video
+                          src={url}
+                          className="w-full h-full object-cover"
+                          controls
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                        />
+                      ) : (
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                  );
+                })}
                 {post.mediaUrls.length > 4 && (
                   <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
                     <span className="text-2xl font-semibold text-muted-foreground">

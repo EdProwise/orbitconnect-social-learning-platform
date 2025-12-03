@@ -150,6 +150,7 @@ export default function CourseDetailPage() {
                     <video
                       src={course.videoUrl}
                       controls
+                      autoPlay
                       className="w-full h-full"
                       poster={course.thumbnail || undefined}
                     >
