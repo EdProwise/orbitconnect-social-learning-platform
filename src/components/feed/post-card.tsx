@@ -34,7 +34,10 @@ import {
   Twitter,
   Facebook,
   Linkedin,
-  Copy
+  Copy,
+  FileIcon,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/api-client';
@@ -95,6 +98,20 @@ const extractTextFromHtml = (html: string, maxLength: number = 200): string => {
   div.innerHTML = html;
   const text = div.textContent || div.innerText || '';
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
+
+// Helper function to check if URL is a PDF
+const isPdfUrl = (url: string): boolean => {
+  return url.toLowerCase().includes('pdf') || url.startsWith('data:application/pdf');
+};
+
+// Helper function to get file name from URL
+const getFileName = (url: string, index: number): string => {
+  if (url.startsWith('data:')) {
+    return `document-${index + 1}.pdf`;
+  }
+  const parts = url.split('/');
+  return parts[parts.length - 1] || `file-${index + 1}`;
 };
 
 export function PostCard({ post }: PostCardProps) {
@@ -1049,18 +1066,60 @@ export function PostCard({ post }: PostCardProps) {
             {/* Files */}
             {post.fileUrls && post.fileUrls.length > 0 && (
               <div className="space-y-2">
-                {post.fileUrls.map((url, index) => (
-                  <a
-                    key={index}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 rounded-lg border border-border hover:bg-accent transition-colors"
-                  >
-                    <BookOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm flex-1 truncate">{url.split('/').pop() || 'Download file'}</span>
-                  </a>
-                ))}
+                {post.fileUrls.map((url, index) => {
+                  const isPdf = isPdfUrl(url);
+                  const fileName = getFileName(url, index);
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent transition-colors group"
+                    >
+                      {isPdf ? (
+                        <FileText className="w-8 h-8 text-red-500 flex-shrink-0" />
+                      ) : (
+                        <FileIcon className="w-8 h-8 text-blue-500 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{fileName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isPdf ? 'PDF Document' : 'File'}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          asChild
+                          className="h-8 w-8"
+                        >
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open in new tab"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          asChild
+                          className="h-8 w-8"
+                        >
+                          <a
+                            href={url}
+                            download={fileName}
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
