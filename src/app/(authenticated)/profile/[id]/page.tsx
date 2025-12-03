@@ -71,6 +71,14 @@ interface UserProfile {
   teachingSubjects?: string[] | null;
 }
 
+// Helper function to check if URL is video
+const isVideoUrl = (url: string): boolean => {
+  if (!url) return false;
+  const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.ogg', '.mkv'];
+  const lowerUrl = url.toLowerCase();
+  return videoExtensions.some(ext => lowerUrl.includes(ext)) || lowerUrl.startsWith('data:video');
+};
+
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
@@ -771,10 +779,17 @@ export default function ProfilePage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="article">Article</TabsTrigger>
+          <TabsTrigger value="photo">Photo</TabsTrigger>
+          <TabsTrigger value="video">Video</TabsTrigger>
+          <TabsTrigger value="questions">Questions</TabsTrigger>
+          <TabsTrigger value="celebrate">Celebrate</TabsTrigger>
+          <TabsTrigger value="poll">Poll</TabsTrigger>
           <TabsTrigger value="materials">Study Materials</TabsTrigger>
+          <TabsTrigger value="donate">Donate Books</TabsTrigger>
           {!isTeacher && <TabsTrigger value="connections">Connections</TabsTrigger>}
         </TabsList>
 
@@ -2171,6 +2186,90 @@ export default function ProfilePage() {
           )}
         </TabsContent>
 
+        <TabsContent value="article" className="space-y-4">
+          {posts.filter(p => p.type === 'ARTICLE').length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No articles posted yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'ARTICLE')
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
+        <TabsContent value="photo" className="space-y-4">
+          {posts.filter(p => p.type === 'PHOTO_VIDEO' && p.mediaUrls && Array.isArray(p.mediaUrls) && p.mediaUrls.some((url: string) => !isVideoUrl(url))).length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No photos posted yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'PHOTO_VIDEO' && p.mediaUrls && Array.isArray(p.mediaUrls) && p.mediaUrls.some((url: string) => !isVideoUrl(url)))
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
+        <TabsContent value="video" className="space-y-4">
+          {posts.filter(p => p.type === 'PHOTO_VIDEO' && p.mediaUrls && Array.isArray(p.mediaUrls) && p.mediaUrls.some((url: string) => isVideoUrl(url))).length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No videos posted yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'PHOTO_VIDEO' && p.mediaUrls && Array.isArray(p.mediaUrls) && p.mediaUrls.some((url: string) => isVideoUrl(url)))
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
+        <TabsContent value="questions" className="space-y-4">
+          {posts.filter(p => p.type === 'QUESTION').length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No questions posted yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'QUESTION')
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
+        <TabsContent value="celebrate" className="space-y-4">
+          {posts.filter(p => p.type === 'CELEBRATE').length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No celebrations posted yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'CELEBRATE')
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
+        <TabsContent value="poll" className="space-y-4">
+          {posts.filter(p => p.type === 'POLL').length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No polls created yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'POLL')
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
         <TabsContent value="materials" className="space-y-4">
           {posts.filter(p => p.type === 'STUDY_MATERIAL').length === 0 ? (
             <Card>
@@ -2181,6 +2280,20 @@ export default function ProfilePage() {
           ) : (
             posts
               .filter(p => p.type === 'STUDY_MATERIAL')
+              .map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </TabsContent>
+
+        <TabsContent value="donate" className="space-y-4">
+          {posts.filter(p => p.type === 'DONATE_BOOKS').length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No book donations posted yet
+              </CardContent>
+            </Card>
+          ) : (
+            posts
+              .filter(p => p.type === 'DONATE_BOOKS')
               .map((post) => <PostCard key={post.id} post={post} />)
           )}
         </TabsContent>
