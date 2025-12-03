@@ -91,6 +91,8 @@ export default function ProfilePage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'connected'>('none');
+  const [connectionId, setConnectionId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [aboutActiveSection, setAboutActiveSection] = useState('overview');
@@ -228,11 +230,50 @@ export default function ProfilePage() {
         const schoolData = await apiRequest(`/api/schools?id=${profileData.schoolId}`, { method: 'GET' });
         setSchool(schoolData);
       }
+
+      // Check connection status if viewing another student's profile
+      if (!isOwnProfile && currentUser.role === 'STUDENT' && profileData.role === 'STUDENT') {
+        await checkConnectionStatus();
+      }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
       toast.error('Failed to load profile');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkConnectionStatus = async () => {
+    try {
+      // Check if there's a connection between current user and profile user
+      const allConnections = await apiRequest(
+        `/api/connections?limit=100`,
+        { method: 'GET' }
+      );
+
+      // Find connection between these two users (in either direction)
+      const connection = allConnections.find((conn: any) =>
+        (conn.requesterId === currentUser.id && conn.receiverId === parseInt(userId)) ||
+        (conn.receiverId === currentUser.id && conn.requesterId === parseInt(userId))
+      );
+
+      if (connection) {
+        setConnectionId(connection.id);
+        if (connection.status === 'ACCEPTED') {
+          setConnectionStatus('connected');
+        } else if (connection.status === 'PENDING') {
+          if (connection.requesterId === currentUser.id) {
+            setConnectionStatus('pending_sent');
+          } else {
+            setConnectionStatus('pending_received');
+          }
+        }
+      } else {
+        setConnectionStatus('none');
+        setConnectionId(null);
+      }
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
     }
   };
 
@@ -251,10 +292,62 @@ export default function ProfilePage() {
           receiverId: parseInt(userId),
         }),
       });
+      setConnectionStatus('pending_sent');
       toast.success('Connection request sent!');
+      await checkConnectionStatus();
     } catch (error) {
       console.error('Failed to send connection request:', error);
       toast.error('Failed to send connection request');
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!connectionId) return;
+    
+    try {
+      await apiRequest(`/api/connections?id=${connectionId}`, {
+        method: 'DELETE',
+      });
+      setConnectionStatus('none');
+      setConnectionId(null);
+      toast.success('Connection request cancelled');
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+      toast.error('Failed to cancel request');
+    }
+  };
+
+  const handleAcceptRequest = async () => {
+    if (!connectionId) return;
+    
+    try {
+      await apiRequest(`/api/connections?id=${connectionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'ACCEPTED' }),
+      });
+      setConnectionStatus('connected');
+      toast.success('Connection request accepted!');
+      await fetchProfile();
+    } catch (error) {
+      console.error('Failed to accept request:', error);
+      toast.error('Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async () => {
+    if (!connectionId) return;
+    
+    try {
+      await apiRequest(`/api/connections?id=${connectionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'REJECTED' }),
+      });
+      setConnectionStatus('none');
+      setConnectionId(null);
+      toast.success('Connection request rejected');
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      toast.error('Failed to reject request');
     }
   };
 
@@ -670,13 +763,52 @@ export default function ProfilePage() {
                         </Button>
                       )}
                       {canConnect && (
-                        <Button 
-                          onClick={handleConnect}
-                          className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
-                        >
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Connect
-                        </Button>
+                        <>
+                          {connectionStatus === 'none' && (
+                            <Button 
+                              onClick={handleConnect}
+                              className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                            >
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Connect
+                            </Button>
+                          )}
+                          {connectionStatus === 'pending_sent' && (
+                            <Button 
+                              onClick={handleCancelRequest}
+                              variant="outline"
+                            >
+                              <UserMinus className="w-4 h-4 mr-2" />
+                              Cancel Request
+                            </Button>
+                          )}
+                          {connectionStatus === 'pending_received' && (
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={handleAcceptRequest}
+                                className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                              >
+                                <UserCheck className="w-4 h-4 mr-2" />
+                                Accept
+                              </Button>
+                              <Button 
+                                onClick={handleRejectRequest}
+                                variant="outline"
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                          {connectionStatus === 'connected' && (
+                            <Button 
+                              variant="secondary"
+                              disabled
+                            >
+                              <UserCheck className="w-4 h-4 mr-2" />
+                              Connected
+                            </Button>
+                          )}
+                        </>
                       )}
                       <Button variant="outline">
                         <MessageSquare className="w-4 h-4 mr-2" />
