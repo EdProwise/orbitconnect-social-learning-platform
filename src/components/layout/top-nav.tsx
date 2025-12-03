@@ -89,11 +89,11 @@ export function TopNav({ user }: TopNavProps) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50">
-      <div className="h-full px-4 flex items-center justify-between gap-4">
+    <header className="fixed top-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-md border-b border-border/60 z-50 shadow-sm">
+      <div className="h-full container mx-auto px-4 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/feed" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-[#854cf4] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-[#854cf4] flex items-center justify-center shadow-inner">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-bold font-poppins hidden sm:inline">OrbitConnect</span>
@@ -108,7 +108,7 @@ export function TopNav({ user }: TopNavProps) {
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9"
+              className="pl-9 h-9 rounded-xl bg-muted/50 border-border/60 focus:bg-background transition"
             />
           </div>
         </form>
@@ -118,16 +118,16 @@ export function TopNav({ user }: TopNavProps) {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative hover:bg-accent rounded-xl transition">
                 <Bell className="w-5 h-5" />
                 <Badge 
-                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-[#854cf4] hover:bg-[#854cf4]"
+                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-[#854cf4] text-white"
                 >
                   3
                 </Badge>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuContent align="end" className="w-80 backdrop-blur-sm border-border/60">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="max-h-96 overflow-y-auto">
@@ -159,11 +159,11 @@ export function TopNav({ user }: TopNavProps) {
           </DropdownMenu>
 
           {/* Messages */}
-          <Button variant="ghost" size="icon" asChild className="relative">
+          <Button variant="ghost" size="icon" asChild className="relative hover:bg-accent rounded-xl transition">
             <Link href="/messages">
               <MessageSquare className="w-5 h-5" />
               <Badge 
-                className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-[#854cf4] hover:bg-[#854cf4]"
+                className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-[#854cf4] text-white"
               >
                 2
               </Badge>
@@ -173,14 +173,14 @@ export function TopNav({ user }: TopNavProps) {
           {/* Profile Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:ring-4 hover:ring-[#854cf4]/10 transition">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={userAvatar} alt={userName} />
                   <AvatarFallback>{getInitials(userName || user.email)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 backdrop-blur-sm border-border/60">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{userName || user.email}</p>
@@ -225,7 +225,7 @@ function NotificationItem({
   unread?: boolean;
 }) {
   return (
-    <div className={`p-3 hover:bg-accent cursor-pointer transition-colors ${unread ? 'bg-accent/50' : ''}`}>
+    <div className={`group p-3 hover:bg-accent/70 cursor-pointer transition-colors rounded-lg ${unread ? 'bg-accent/50' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{title}</p>
@@ -233,7 +233,7 @@ function NotificationItem({
           <p className="text-xs text-muted-foreground mt-1">{time}</p>
         </div>
         {unread && (
-          <div className="w-2 h-2 rounded-full bg-[#854cf4] flex-shrink-0 mt-1" />
+          <div className="w-2 h-2 rounded-full bg-[#854cf4] flex-shrink-0 mt-1 group-hover:scale-110 transition-transform" />
         )}
       </div>
     </div>

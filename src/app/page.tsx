@@ -6,11 +6,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+      <header className="border-b border-border/60 sticky top-0 bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/60 z-50 shadow-sm">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#854cf4] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-[#854cf4] flex items-center justify-center shadow-inner">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold font-poppins">OrbitConnect</span>
@@ -38,7 +38,7 @@ export default function LandingPage() {
               <Link href="/signup">
                 <Button 
                   size="sm"
-                  className="bg-[#854cf4] hover:bg-[#7743e0] text-white"
+                  className="bg-[#854cf4] hover:bg-[#7743e0] text-white shadow-lg shadow-[#854cf4]/20"
                 >
                   Get Started
                 </Button>
@@ -51,10 +51,14 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 sm:py-32">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-950/20 dark:via-background dark:to-blue-950/20" />
+        <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full bg-[#854cf4]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
         <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-poppins mb-6">
-              Connect. Learn. <span className="text-[#854cf4]">Grow Together.</span>
+              <span className="bg-gradient-to-br from-[#854cf4] via-blue-500 to-cyan-400 bg-clip-text text-transparent">
+                Connect. Learn. Grow Together.
+              </span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
               A modern social learning platform that brings students, teachers, and schools together in one collaborative space.
@@ -63,7 +67,7 @@ export default function LandingPage() {
               <Link href="/signup?role=student">
                 <Button 
                   size="lg"
-                  className="bg-[#854cf4] hover:bg-[#7743e0] text-white w-full sm:w-auto"
+                  className="bg-[#854cf4] hover:bg-[#7743e0] text-white w-full sm:w-auto shadow-xl shadow-[#854cf4]/25"
                 >
                   <GraduationCap className="w-5 h-5 mr-2" />
                   Join as Student
@@ -73,7 +77,7 @@ export default function LandingPage() {
                 <Button 
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto hover:shadow-lg hover:-translate-y-0.5 transition will-change-transform"
                 >
                   <Users className="w-5 h-5 mr-2" />
                   Join as Teacher
@@ -83,7 +87,7 @@ export default function LandingPage() {
                 <Button 
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto hover:shadow-lg hover:-translate-y-0.5 transition will-change-transform"
                 >
                   <School className="w-5 h-5 mr-2" />
                   Join as School
@@ -94,7 +98,8 @@ export default function LandingPage() {
 
           {/* Hero Image Placeholder */}
           <div className="mt-16 relative">
-            <div className="aspect-video rounded-xl border border-border bg-muted overflow-hidden shadow-2xl">
+            <div className="relative aspect-video rounded-2xl border border-border/70 bg-muted overflow-hidden shadow-2xl">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[#854cf4]/10 via-transparent to-blue-500/10" />
               <img 
                 src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=675&fit=crop" 
                 alt="Students collaborating"
@@ -203,13 +208,13 @@ export default function LandingPage() {
                 </li>
               </ul>
               <Link href="/signup?role=student" className="inline-block mt-8">
-                <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white">
+                <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white shadow-lg shadow-[#854cf4]/25">
                   Get Started as Student
                 </Button>
               </Link>
             </div>
             <div className="relative h-96 lg:h-full">
-              <div className="aspect-square rounded-xl border border-border bg-muted overflow-hidden shadow-lg">
+              <div className="aspect-square rounded-2xl border border-border bg-muted overflow-hidden shadow-xl">
                 <img 
                   src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800&h=800&fit=crop" 
                   alt="Students learning"
@@ -262,13 +267,13 @@ export default function LandingPage() {
                 </li>
               </ul>
               <Link href="/signup?role=teacher" className="inline-block mt-8">
-                <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white">
+                <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white shadow-lg shadow-[#854cf4]/25">
                   Get Started as Teacher
                 </Button>
               </Link>
             </div>
             <div className="relative h-96 lg:h-full">
-              <div className="aspect-square rounded-xl border border-border bg-muted overflow-hidden shadow-lg">
+              <div className="aspect-square rounded-2xl border border-border bg-muted overflow-hidden shadow-xl">
                 <img 
                   src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800&h=800&fit=crop" 
                   alt="Teachers teaching"
@@ -321,13 +326,13 @@ export default function LandingPage() {
                 </li>
               </ul>
               <Link href="/signup?role=school" className="inline-block mt-8">
-                <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white">
+                <Button className="bg-[#854cf4] hover:bg-[#7743e0] text-white shadow-lg shadow-[#854cf4]/25">
                   Get Started as School
                 </Button>
               </Link>
             </div>
             <div className="relative h-96 lg:h-full">
-              <div className="aspect-square rounded-xl border border-border bg-muted overflow-hidden shadow-lg">
+              <div className="aspect-square rounded-2xl border border-border bg-muted overflow-hidden shadow-xl">
                 <img 
                   src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800&h=800&fit=crop" 
                   alt="Schools community"
@@ -340,12 +345,12 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-12">
+      <footer className="border-t border-border/60 py-12 bg-card/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-[#854cf4] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-[#854cf4] flex items-center justify-center shadow-inner">
                   <GraduationCap className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-lg font-bold font-poppins">OrbitConnect</span>
@@ -379,7 +384,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
+          <div className="pt-8 border-t border-border/60 text-center text-sm text-muted-foreground">
             <p>&copy; 2024 OrbitConnect. All rights reserved.</p>
           </div>
         </div>
@@ -390,8 +395,8 @@ export default function LandingPage() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="p-6 rounded-xl border border-border bg-card hover:shadow-lg transition-shadow">
-      <div className="w-12 h-12 rounded-lg bg-[#854cf4]/10 flex items-center justify-center text-[#854cf4] mb-4">
+    <div className="group p-6 rounded-2xl border border-border/60 bg-card/90 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#854cf4]/15 to-blue-500/15 flex items-center justify-center text-[#854cf4] mb-4 group-hover:scale-105 transition-transform">
         {icon}
       </div>
       <h3 className="font-semibold mb-2">{title}</h3>
