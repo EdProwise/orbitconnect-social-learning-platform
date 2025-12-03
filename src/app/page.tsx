@@ -140,7 +140,7 @@ export default function LandingPage() {
             />
             <FeatureCard
               icon={<Users className="w-6 h-6" />}
-              title="Collegues"
+              title="Mentorship"
               description="Connect with experienced mentors and tutors to accelerate your learning."
             />
             <FeatureCard
