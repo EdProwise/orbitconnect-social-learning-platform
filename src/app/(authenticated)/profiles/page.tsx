@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, UserPlus, MessageSquare } from 'lucide-react';
+import { Search, UserPlus, MessageSquare, UserCheck, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 
@@ -23,9 +23,17 @@ interface User {
   schoolId: number | null;
 }
 
+interface Connection {
+  id: number;
+  requesterId: number;
+  receiverId: number;
+  status: string;
+}
+
 export default function ProfilesPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -40,16 +48,21 @@ export default function ProfilesPage() {
       return;
     }
     
-    fetchUsers();
+    fetchData();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     try {
       setIsLoading(true);
-      const data = await apiRequest('/api/users?role=STUDENT&limit=50', { method: 'GET' });
-      setUsers(data);
+      // Fetch users and connections in parallel
+      const [usersData, connectionsData] = await Promise.all([
+        apiRequest('/api/users?role=STUDENT&limit=50', { method: 'GET' }),
+        apiRequest(`/api/connections?userId=${currentUser.id}`, { method: 'GET' })
+      ]);
+      setUsers(usersData);
+      setConnections(connectionsData);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      console.error('Failed to fetch data:', error);
       toast.error('Failed to load students');
     } finally {
       setIsLoading(false);
@@ -57,8 +70,9 @@ export default function ProfilesPage() {
   };
 
   const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    user.id !== currentUser.id && // Don't show current user
+    (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Don't render if not a student
@@ -104,7 +118,13 @@ export default function ProfilesPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map((user) => (
-            <UserCard key={user.id} user={user} />
+            <UserCard 
+              key={user.id} 
+              user={user} 
+              currentUserId={currentUser.id}
+              connections={connections}
+              onConnectionChange={fetchData}
+            />
           ))}
         </div>
       )}
@@ -112,7 +132,136 @@ export default function ProfilesPage() {
   );
 }
 
-function UserCard({ user }: { user: User }) {
+function UserCard({ 
+  user, 
+  currentUserId, 
+  connections,
+  onConnectionChange 
+}: { 
+  user: User; 
+  currentUserId: number;
+  connections: Connection[];
+  onConnectionChange: () => void;
+}) {
+  const router = useRouter();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Find connection between current user and this user
+  const connection = connections.find(
+    conn => 
+      (conn.requesterId === currentUserId && conn.receiverId === user.id) ||
+      (conn.receiverId === currentUserId && conn.requesterId === user.id)
+  );
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      await apiRequest('/api/connections', {
+        method: 'POST',
+        body: JSON.stringify({
+          requesterId: currentUserId,
+          receiverId: user.id
+        })
+      });
+      toast.success('Connection request sent!');
+      onConnectionChange(); // Refresh connections
+    } catch (error: any) {
+      console.error('Failed to send connection request:', error);
+      if (error.code === 'DUPLICATE_CONNECTION') {
+        toast.error('Connection request already exists');
+      } else {
+        toast.error('Failed to send connection request');
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleMessage = () => {
+    // Only allow messaging if connected
+    if (connection?.status === 'ACCEPTED') {
+      router.push(`/messages?userId=${user.id}`);
+    } else {
+      toast.error('You must be connected to send messages');
+    }
+  };
+
+  const renderConnectButton = () => {
+    if (!connection) {
+      // No connection - show Connect button
+      return (
+        <Button 
+          size="sm" 
+          className="flex-1 bg-[#854cf4] hover:bg-[#7743e0] text-white"
+          onClick={handleConnect}
+          disabled={isConnecting}
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          {isConnecting ? 'Connecting...' : 'Connect'}
+        </Button>
+      );
+    }
+
+    if (connection.status === 'PENDING') {
+      // Pending connection
+      if (connection.requesterId === currentUserId) {
+        // Current user sent the request
+        return (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="flex-1"
+            disabled
+          >
+            <Clock className="w-4 h-4 mr-2" />
+            Pending
+          </Button>
+        );
+      } else {
+        // Current user received the request - could add Accept button here
+        return (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="flex-1"
+            onClick={() => router.push('/notifications')}
+          >
+            <Clock className="w-4 h-4 mr-2" />
+            Respond
+          </Button>
+        );
+      }
+    }
+
+    if (connection.status === 'ACCEPTED') {
+      // Connected
+      return (
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="flex-1 border-[#854cf4] text-[#854cf4]"
+          disabled
+        >
+          <UserCheck className="w-4 h-4 mr-2" />
+          Connected
+        </Button>
+      );
+    }
+
+    // Rejected or other status - show Connect again
+    return (
+      <Button 
+        size="sm" 
+        className="flex-1 bg-[#854cf4] hover:bg-[#7743e0] text-white"
+        onClick={handleConnect}
+        disabled={isConnecting}
+      >
+        <UserPlus className="w-4 h-4 mr-2" />
+        Connect
+      </Button>
+    );
+  };
+
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardContent className="p-6 space-y-4">
@@ -134,14 +283,14 @@ function UserCard({ user }: { user: User }) {
           </div>
         </Link>
         <div className="flex gap-2 pt-2">
+          {renderConnectButton()}
           <Button 
             size="sm" 
-            className="flex-1 bg-[#854cf4] hover:bg-[#7743e0] text-white"
+            variant="outline" 
+            className="flex-1"
+            onClick={handleMessage}
+            disabled={connection?.status !== 'ACCEPTED'}
           >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Connect
-          </Button>
-          <Button size="sm" variant="outline" className="flex-1">
             <MessageSquare className="w-4 h-4 mr-2" />
             Message
           </Button>
