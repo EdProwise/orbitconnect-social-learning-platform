@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -18,9 +18,11 @@ import {
   Users,
   Loader2,
   Key,
-  AlertTriangle
+  AlertTriangle,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
+import { apiRequest } from '@/lib/api-client';
 
 export default function PrivacySecurityPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +33,7 @@ export default function PrivacySecurityPage() {
   const [profileVisibility, setProfileVisibility] = useState('public');
   const [showEmail, setShowEmail] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
+  const [dateOfBirthPrivacy, setDateOfBirthPrivacy] = useState(true);
   const [allowMessages, setAllowMessages] = useState(true);
   const [allowTags, setAllowTags] = useState(true);
   
@@ -46,12 +49,37 @@ export default function PrivacySecurityPage() {
   const [messageNotifications, setMessageNotifications] = useState(true);
   const [reactionNotifications, setReactionNotifications] = useState(true);
 
+  // Load current user's privacy settings
+  useEffect(() => {
+    const loadPrivacySettings = async () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const userData = await apiRequest(`/api/users?id=${user.id}`, { method: 'GET' });
+          setDateOfBirthPrivacy(userData.dateOfBirthPrivacy !== false);
+        }
+      } catch (error) {
+        console.error('Failed to load privacy settings:', error);
+      }
+    };
+    loadPrivacySettings();
+  }, []);
+
   const handleSavePrivacy = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Privacy settings updated successfully');
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        await apiRequest(`/api/users?id=${user.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            dateOfBirthPrivacy
+          }),
+        });
+        toast.success('Privacy settings updated successfully');
+      }
     } catch (error) {
       toast.error('Failed to update privacy settings');
     } finally {
@@ -207,6 +235,23 @@ export default function PrivacySecurityPage() {
                 id="show-phone"
                 checked={showPhone}
                 onCheckedChange={setShowPhone}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#854cf4]" />
+                <div>
+                  <Label htmlFor="date-of-birth-privacy">Date of Birth Privacy</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {dateOfBirthPrivacy ? 'Only you can see your date of birth' : 'Everyone can see your date of birth'}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="date-of-birth-privacy"
+                checked={dateOfBirthPrivacy}
+                onCheckedChange={setDateOfBirthPrivacy}
               />
             </div>
 

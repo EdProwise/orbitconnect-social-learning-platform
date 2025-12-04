@@ -52,6 +52,7 @@ import {
   UserCheck,
   UserMinus,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
 import { apiRequest, authApi } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,6 +70,8 @@ interface UserProfile {
   createdAt: string;
   currentTown?: string | null;
   phone?: string | null;
+  dateOfBirth?: string | null;
+  dateOfBirthPrivacy?: boolean | null;
   socialMediaLinks?: { instagram?: string; twitter?: string; linkedin?: string } | null;
   class?: string | null;
   schoolHistory?: Array<{ schoolName: string; from: string; to: string }> | null;
@@ -111,6 +114,8 @@ export default function ProfilePage() {
     schoolId: null as number | null,
     currentTown: '',
     phone: '',
+    dateOfBirth: '',
+    dateOfBirthPrivacy: true,
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
     class: '',
     schoolHistory: [{ schoolName: '', from: '', to: '' }],
@@ -120,6 +125,8 @@ export default function ProfilePage() {
     schoolId: null as number | null,
     currentTown: '',
     phone: '',
+    dateOfBirth: '',
+    dateOfBirthPrivacy: true,
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
     class: '',
     schoolHistory: [{ schoolName: '', from: '', to: '' }],
@@ -228,6 +235,8 @@ export default function ProfilePage() {
         schoolId: profileData.schoolId || null,
         currentTown: profileData.currentTown || '',
         phone: profileData.phone || '',
+        dateOfBirth: profileData.dateOfBirth || '',
+        dateOfBirthPrivacy: profileData.dateOfBirthPrivacy || true,
         socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
         class: profileData.class || '',
         schoolHistory: profileData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
@@ -237,6 +246,8 @@ export default function ProfilePage() {
         schoolId: profileData.schoolId || null,
         currentTown: profileData.currentTown || '',
         phone: profileData.phone || '',
+        dateOfBirth: profileData.dateOfBirth || '',
+        dateOfBirthPrivacy: profileData.dateOfBirthPrivacy || true,
         socialMediaLinks: profileData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
         class: profileData.class || '',
         schoolHistory: profileData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
@@ -455,6 +466,8 @@ export default function ProfilePage() {
             schoolId: aboutEditForm.schoolId,
             currentTown: aboutEditForm.currentTown,
             phone: aboutEditForm.phone,
+            dateOfBirth: aboutEditForm.dateOfBirth,
+            dateOfBirthPrivacy: aboutEditForm.dateOfBirthPrivacy,
             socialMediaLinks: aboutEditForm.socialMediaLinks,
             aboutYourself: aboutEditForm.aboutYourself,
           }),
@@ -1769,6 +1782,36 @@ export default function ProfilePage() {
                           </div>
                         )}
 
+                        {profile.dateOfBirth && (isOwnProfile || !profile.dateOfBirthPrivacy) && (
+                          <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <Calendar className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">
+                                {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-0.5">Date of Birth</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                {profile.dateOfBirthPrivacy ? (
+                                  <Lock className="w-4 h-4 text-muted-foreground" title="Private" />
+                                ) : (
+                                  <Globe className="w-4 h-4 text-muted-foreground" title="Public" />
+                                )}
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
                           <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
                             <Mail className="w-5 h-5 text-[#854cf4]" />
@@ -1834,7 +1877,7 @@ export default function ProfilePage() {
                           </div>
                         )}
 
-                        {!profile.phone && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
+                        {!profile.phone && !profile.dateOfBirth && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
                           <div className="py-12 text-center">
                             <p className="text-sm text-muted-foreground mb-4">No contact information added yet</p>
                             {isOwnProfile && (
@@ -2220,6 +2263,16 @@ export default function ProfilePage() {
                           />
                         </div>
 
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Date of Birth</Label>
+                          <Input
+                            type="date"
+                            value={aboutEditForm.dateOfBirth}
+                            onChange={(e) => setAboutEditForm({ ...aboutEditForm, dateOfBirth: e.target.value })}
+                            className="h-11"
+                          />
+                        </div>
+
                         <div className="space-y-3">
                           <Label className="text-sm font-medium">Social Links</Label>
                           
@@ -2274,6 +2327,36 @@ export default function ProfilePage() {
                             <div className="flex items-center gap-2">
                               <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
                                 <Globe className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {profile.dateOfBirth && (isOwnProfile || !profile.dateOfBirthPrivacy) && (
+                          <div className="flex items-start gap-4 py-3 hover:bg-muted/30 rounded-lg px-3 -mx-3 transition-colors">
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                              <Calendar className="w-5 h-5 text-[#854cf4]" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">
+                                {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-0.5">Date of Birth</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
+                                {profile.dateOfBirthPrivacy ? (
+                                  <Lock className="w-4 h-4 text-muted-foreground" title="Private" />
+                                ) : (
+                                  <Globe className="w-4 h-4 text-muted-foreground" title="Public" />
+                                )}
                               </button>
                               <button className="p-1.5 hover:bg-muted rounded-full transition-colors">
                                 <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
@@ -2347,7 +2430,7 @@ export default function ProfilePage() {
                           </div>
                         )}
 
-                        {!profile.phone && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
+                        {!profile.phone && !profile.dateOfBirth && (!profile.socialMediaLinks || (!profile.socialMediaLinks.instagram && !profile.socialMediaLinks.twitter && !profile.socialMediaLinks.linkedin)) && (
                           <div className="py-12 text-center">
                             <p className="text-sm text-muted-foreground mb-4">No contact information added yet</p>
                             {isOwnProfile && (
