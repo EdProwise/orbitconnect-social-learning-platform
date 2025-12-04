@@ -529,6 +529,19 @@ export default function ProfilePage() {
         body: JSON.stringify({ [field]: previewUrl }),
       });
       
+      // Update localStorage with new profile data
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        if (field === 'avatar') {
+          userData.avatar = previewUrl;
+        }
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event('profileUpdated'));
+      }
+      
       // Refetch profile data to get latest from database
       await fetchProfile();
       

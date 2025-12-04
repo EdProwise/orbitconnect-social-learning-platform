@@ -28,15 +28,6 @@ export function RightSidebar({ user }: RightSidebarProps) {
           <CardTitle className="text-base">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Link href="/feed?compose=true">
-            <Button 
-              className="w-full justify-start bg-[#854cf4] hover:bg-[#7743e0] text-white"
-              size="sm"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Start a Post
-            </Button>
-          </Link>
           <Link href="/organize/quiz/new">
             <Button 
               variant="outline" 
@@ -120,6 +111,27 @@ export function RightSidebar({ user }: RightSidebarProps) {
         </Card>
       )}
 
+      {/* Suggested Colleagues (Teacher) */}
+      {user.role === 'TEACHER' && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Suggested Colleagues</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ColleagueItem
+              name="Aisha Verma"
+              subjects="Mathematics, Algebra"
+              avatar="https://i.pravatar.cc/150?u=aisha"
+            />
+            <ColleagueItem
+              name="Daniel Roberts"
+              subjects="Physics, STEM"
+              avatar="https://i.pravatar.cc/150?u=daniel"
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Trending Topics */}
       <TrendingTopics />
     </div>
@@ -181,6 +193,33 @@ function MentorItem({
       <Button size="sm" variant="outline" className="flex-shrink-0">
         <Users className="w-3 h-3 mr-1" />
         Book
+      </Button>
+    </div>
+  );
+}
+
+function ColleagueItem({ 
+  name, 
+  subjects, 
+  avatar 
+}: { 
+  name: string; 
+  subjects: string; 
+  avatar: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer">
+      <Avatar className="w-10 h-10">
+        <AvatarImage src={avatar} alt={name} />
+        <AvatarFallback>{name[0]}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{name}</p>
+        <p className="text-xs text-muted-foreground truncate">{subjects}</p>
+      </div>
+      <Button size="sm" variant="outline" className="flex-shrink-0">
+        <Users className="w-3 h-3 mr-1" />
+        Follow
       </Button>
     </div>
   );

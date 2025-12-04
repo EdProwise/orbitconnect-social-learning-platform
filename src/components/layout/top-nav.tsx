@@ -49,15 +49,17 @@ export function TopNav({ user }: TopNavProps) {
   useEffect(() => {
     loadUserData();
 
-    // Listen for storage events to update when profile changes
-    const handleStorageChange = () => {
+    // Listen for custom profile update events
+    const handleProfileUpdate = () => {
       loadUserData();
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
     };
   }, []);
 
