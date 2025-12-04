@@ -30,6 +30,7 @@ export default function SettingsPage() {
     schoolId: null as number | null,
     currentTown: '',
     phone: '',
+    dateOfBirth: '',
     socialMediaLinks: { instagram: '', twitter: '', linkedin: '' },
     class: '',
     schoolHistory: [{ schoolName: '', from: '', to: '' }],
@@ -72,6 +73,7 @@ export default function SettingsPage() {
         schoolId: userData.schoolId || null,
         currentTown: userData.currentTown || '',
         phone: userData.phone || '',
+        dateOfBirth: userData.dateOfBirth || '',
         socialMediaLinks: userData.socialMediaLinks || { instagram: '', twitter: '', linkedin: '' },
         class: userData.class || '',
         schoolHistory: userData.schoolHistory || [{ schoolName: '', from: '', to: '' }],
@@ -488,12 +490,12 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="class">Class</Label>
+                        <Label htmlFor="dateOfBirth">Date of Birth</Label>
                         <Input
-                          id="class"
-                          placeholder="e.g., Class 10 / Year 2"
-                          value={profileForm.class}
-                          onChange={(e) => setProfileForm({ ...profileForm, class: e.target.value })}
+                          id="dateOfBirth"
+                          type="date"
+                          value={profileForm.dateOfBirth}
+                          onChange={(e) => setProfileForm({ ...profileForm, dateOfBirth: e.target.value })}
                         />
                       </div>
 

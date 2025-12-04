@@ -30,6 +30,7 @@ export const users = sqliteTable('users', {
   schoolId: integer('school_id').references(() => schools.id),
   currentTown: text('current_town'),
   phone: text('phone'),
+  dateOfBirth: text('date_of_birth'),
   socialMediaLinks: text('social_media_links', { mode: 'json' }),
   class: text('class'),
   schoolHistory: text('school_history', { mode: 'json' }),
@@ -263,4 +264,14 @@ export const follows = sqliteTable('follows', {
   createdAt: text('created_at').notNull(),
 }, (table) => ({
   followerFollowingIdx: index('follower_following_idx').on(table.followerId, table.followingId),
+}));
+
+// Add new school_follows table at the end
+export const schoolFollows = sqliteTable('school_follows', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  followerId: integer('follower_id').notNull().references(() => users.id),
+  schoolId: integer('school_id').notNull().references(() => schools.id),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  followerSchoolIdx: index('follower_school_idx').on(table.followerId, table.schoolId),
 }));
