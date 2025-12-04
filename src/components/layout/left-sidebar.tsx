@@ -47,14 +47,25 @@ export function LeftSidebar({ user }: LeftSidebarProps) {
             key={item.name}
             href={item.href}
             className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-300 group relative overflow-hidden',
               isActive
-                ? 'bg-[#854cf4]/10 text-[#854cf4]'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                ? 'bg-gradient-to-r from-[#854cf4]/10 via-[#9f6fff]/10 to-[#854cf4]/10 text-[#854cf4] luxury-shadow'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground hover:scale-[1.02]'
             )}
           >
-            <Icon className="w-5 h-5" />
-            {item.name}
+            {isActive && (
+              <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 via-transparent to-[#D4AF37]/5 animate-pulse" />
+            )}
+            <Icon className={cn(
+              "w-5 h-5 relative z-10 transition-all duration-300",
+              isActive 
+                ? "text-[#854cf4]" 
+                : "group-hover:text-[#D4AF37] group-hover:scale-110"
+            )} />
+            <span className="relative z-10">{item.name}</span>
+            {isActive && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-[#D4AF37] via-[#854cf4] to-[#D4AF37] rounded-r-full luxury-shadow" />
+            )}
           </Link>
         );
       })}

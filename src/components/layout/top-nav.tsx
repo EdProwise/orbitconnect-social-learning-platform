@@ -89,26 +89,28 @@ export function TopNav({ user }: TopNavProps) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-md border-b border-border/60 z-50 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 h-20 glass-effect border-b border-border/40 z-50 luxury-shadow">
       <div className="h-full container mx-auto px-4 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link href="/feed" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-[#854cf4] flex items-center justify-center shadow-inner">
-            <GraduationCap className="w-5 h-5 text-white" />
+        <Link href="/feed" className="flex items-center gap-3 flex-shrink-0 group">
+          <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#D4AF37] via-[#854cf4] to-[#B8941F] flex items-center justify-center luxury-shadow-lg group-hover:scale-105 transition-transform duration-300">
+            <div className="absolute inset-[2px] rounded-[14px] bg-[#854cf4] flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
           </div>
-          <span className="text-lg font-bold font-poppins hidden sm:inline">OrbitConnect</span>
+          <span className="text-xl font-bold font-poppins hidden sm:inline bg-gradient-to-r from-foreground via-[#854cf4] to-foreground bg-clip-text text-transparent">OrbitConnect</span>
         </Link>
 
         {/* Search */}
         <form onSubmit={handleSearch} className="flex-1 max-w-lg">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 rounded-xl bg-muted/50 border-border/60 focus:bg-background transition"
+              className="pl-11 h-11 rounded-2xl glass-effect border-border/40 focus:border-[#D4AF37]/30 transition-all"
             />
           </div>
         </form>
@@ -118,18 +120,18 @@ export function TopNav({ user }: TopNavProps) {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative hover:bg-accent rounded-xl transition">
-                <Bell className="w-5 h-5" />
+              <Button variant="ghost" size="icon" className="relative hover:bg-accent/50 rounded-2xl transition-all hover:scale-105 group">
+                <Bell className="w-5 h-5 group-hover:text-[#D4AF37] transition-colors" />
                 <Badge 
-                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-[#854cf4] text-white"
+                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-gradient-to-br from-[#854cf4] to-[#9f6fff] text-white border-2 border-background luxury-shadow"
                 >
                   3
                 </Badge>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 backdrop-blur-sm border-border/60">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent align="end" className="w-80 glass-effect border-border/40 luxury-shadow-lg rounded-2xl">
+              <DropdownMenuLabel className="text-base font-semibold">Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border/40" />
               <div className="max-h-96 overflow-y-auto">
                 <NotificationItem
                   title="New comment"
@@ -149,9 +151,9 @@ export function TopNav({ user }: TopNavProps) {
                   time="2 hours ago"
                 />
               </div>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border/40" />
               <DropdownMenuItem asChild>
-                <Link href="/notifications" className="w-full cursor-pointer">
+                <Link href="/notifications" className="w-full cursor-pointer font-medium text-[#854cf4] hover:text-[#D4AF37] transition-colors">
                   View all notifications
                 </Link>
               </DropdownMenuItem>
@@ -159,11 +161,11 @@ export function TopNav({ user }: TopNavProps) {
           </DropdownMenu>
 
           {/* Messages */}
-          <Button variant="ghost" size="icon" asChild className="relative hover:bg-accent rounded-xl transition">
+          <Button variant="ghost" size="icon" asChild className="relative hover:bg-accent/50 rounded-2xl transition-all hover:scale-105 group">
             <Link href="/messages">
-              <MessageSquare className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5 group-hover:text-[#D4AF37] transition-colors" />
               <Badge 
-                className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-[#854cf4] text-white"
+                className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 bg-gradient-to-br from-[#854cf4] to-[#9f6fff] text-white border-2 border-background luxury-shadow"
               >
                 2
               </Badge>
@@ -173,35 +175,35 @@ export function TopNav({ user }: TopNavProps) {
           {/* Profile Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:ring-4 hover:ring-[#854cf4]/10 transition">
-                <Avatar className="h-9 w-9">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:ring-4 hover:ring-[#D4AF37]/20 transition-all hover:scale-105">
+                <Avatar className="h-10 w-10 border-2 border-[#D4AF37]/20">
                   <AvatarImage src={userAvatar} alt={userName} />
-                  <AvatarFallback>{getInitials(userName || user.email)}</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-to-br from-[#D4AF37]/20 to-[#854cf4]/20 text-foreground font-semibold">{getInitials(userName || user.email)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 backdrop-blur-sm border-border/60">
+            <DropdownMenuContent align="end" className="w-56 glass-effect border-border/40 luxury-shadow-lg rounded-2xl">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{userName || user.email}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.role}</p>
+                  <p className="text-sm font-semibold leading-none">{userName || user.email}</p>
+                  <p className="text-xs leading-none text-[#D4AF37] font-medium uppercase tracking-wider">{user.role}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border/40" />
               <DropdownMenuItem asChild>
-                <Link href={`/profile/${user.userId}`} className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
+                <Link href={`/profile/${user.userId}`} className="cursor-pointer hover:bg-accent/50 rounded-xl transition-colors">
+                  <User className="mr-2 h-4 w-4 text-[#854cf4]" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/settings" className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
+                <Link href="/settings" className="cursor-pointer hover:bg-accent/50 rounded-xl transition-colors">
+                  <Settings className="mr-2 h-4 w-4 text-[#854cf4]" />
                   Settings
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+              <DropdownMenuSeparator className="bg-border/40" />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer hover:bg-destructive/10 text-destructive rounded-xl transition-colors">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>
@@ -225,15 +227,18 @@ function NotificationItem({
   unread?: boolean;
 }) {
   return (
-    <div className={`group p-3 hover:bg-accent/70 cursor-pointer transition-colors rounded-lg ${unread ? 'bg-accent/50' : ''}`}>
+    <div className={`group p-4 hover:bg-accent/50 cursor-pointer transition-all rounded-xl m-1 ${unread ? 'bg-accent/30' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{title}</p>
-          <p className="text-xs text-muted-foreground truncate">{message}</p>
-          <p className="text-xs text-muted-foreground mt-1">{time}</p>
+          <p className="text-sm font-semibold truncate">{title}</p>
+          <p className="text-xs text-muted-foreground truncate leading-relaxed mt-0.5">{message}</p>
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+            <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+            {time}
+          </p>
         </div>
         {unread && (
-          <div className="w-2 h-2 rounded-full bg-[#854cf4] flex-shrink-0 mt-1 group-hover:scale-110 transition-transform" />
+          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#854cf4] flex-shrink-0 mt-1 group-hover:scale-125 transition-transform luxury-shadow" />
         )}
       </div>
     </div>
