@@ -13,6 +13,7 @@ import {
   BookOpen,
   Bookmark,
   UserCircle,
+  UserPlus,
 } from 'lucide-react';
 import { JWTPayload } from '@/lib/auth';
 
@@ -28,6 +29,8 @@ export function LeftSidebar({ user }: LeftSidebarProps) {
     { name: user.role === 'STUDENT' ? 'Mentors' : 'Collegues', href: '/teachers', icon: UserCheck },
     // Only show "Meet GenZ" for students
     ...(user.role === 'STUDENT' ? [{ name: 'Meet GenZ', href: '/profiles', icon: Users }] : []),
+    // Only show "Connection Requests" for students
+    ...(user.role === 'STUDENT' ? [{ name: 'Connection Requests', href: '/connection-requests', icon: UserPlus }] : []),
     { name: 'Discover School', href: '/schools', icon: School },
     { name: 'Organize', href: '/organize', icon: Calendar },
     { name: 'Tutors', href: '/tutors', icon: GraduationCap },
