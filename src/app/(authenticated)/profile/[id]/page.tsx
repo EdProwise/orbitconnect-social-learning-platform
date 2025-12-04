@@ -14,6 +14,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PostCard } from '@/components/feed/post-card';
 import {
   UserPlus,
@@ -45,6 +51,7 @@ import {
   BookOpen,
   UserCheck,
   UserMinus,
+  ChevronDown,
 } from 'lucide-react';
 import { apiRequest, authApi } from '@/lib/api-client';
 import { formatDistanceToNow } from 'date-fns';
@@ -945,19 +952,97 @@ export default function ProfilePage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="posts">Posts</TabsTrigger>
-          <TabsTrigger value="article">Article</TabsTrigger>
-          <TabsTrigger value="photo">Photo</TabsTrigger>
-          <TabsTrigger value="video">Video</TabsTrigger>
-          <TabsTrigger value="questions">Questions</TabsTrigger>
-          <TabsTrigger value="celebrate">Celebrate</TabsTrigger>
-          <TabsTrigger value="poll">Poll</TabsTrigger>
-          <TabsTrigger value="materials">Study Materials</TabsTrigger>
-          <TabsTrigger value="donate">Donate Books</TabsTrigger>
-          {!isTeacher && <TabsTrigger value="connections">Connections</TabsTrigger>}
-        </TabsList>
+        <div className="relative bg-card border border-border rounded-xl p-1 luxury-shadow">
+          <div className="flex items-center gap-1">
+            {/* Visible tabs */}
+            <TabsList className="flex-1 flex items-center gap-1 bg-transparent border-0 h-auto p-0 overflow-x-auto scrollbar-hide">
+              <TabsTrigger 
+                value="overview"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#854cf4] data-[state=active]:to-[#9f6fff] data-[state=active]:text-white data-[state=active]:luxury-shadow px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="posts"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#854cf4] data-[state=active]:to-[#9f6fff] data-[state=active]:text-white data-[state=active]:luxury-shadow px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+              >
+                Posts
+              </TabsTrigger>
+              <TabsTrigger 
+                value="article"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#854cf4] data-[state=active]:to-[#9f6fff] data-[state=active]:text-white data-[state=active]:luxury-shadow px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+              >
+                Article
+              </TabsTrigger>
+              <TabsTrigger 
+                value="photo"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#854cf4] data-[state=active]:to-[#9f6fff] data-[state=active]:text-white data-[state=active]:luxury-shadow px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+              >
+                Photo
+              </TabsTrigger>
+              <TabsTrigger 
+                value="video"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#854cf4] data-[state=active]:to-[#9f6fff] data-[state=active]:text-white data-[state=active]:luxury-shadow px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+              >
+                Video
+              </TabsTrigger>
+            </TabsList>
+
+            {/* More dropdown for remaining tabs */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-muted/50 whitespace-nowrap"
+                >
+                  More
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 glass-effect luxury-shadow-lg">
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab('questions')}
+                  className={activeTab === 'questions' ? 'bg-primary/10 text-[#854cf4] font-medium' : ''}
+                >
+                  Questions
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab('celebrate')}
+                  className={activeTab === 'celebrate' ? 'bg-primary/10 text-[#854cf4] font-medium' : ''}
+                >
+                  Celebrate
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab('poll')}
+                  className={activeTab === 'poll' ? 'bg-primary/10 text-[#854cf4] font-medium' : ''}
+                >
+                  Poll
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab('materials')}
+                  className={activeTab === 'materials' ? 'bg-primary/10 text-[#854cf4] font-medium' : ''}
+                >
+                  Study Materials
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab('donate')}
+                  className={activeTab === 'donate' ? 'bg-primary/10 text-[#854cf4] font-medium' : ''}
+                >
+                  Donate Books
+                </DropdownMenuItem>
+                {!isTeacher && (
+                  <DropdownMenuItem 
+                    onClick={() => setActiveTab('connections')}
+                    className={activeTab === 'connections' ? 'bg-primary/10 text-[#854cf4] font-medium' : ''}
+                  >
+                    Connections
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
 
         <TabsContent value="overview" className="space-y-4">
           {/* LinkedIn-Style About Card with Sidebar */}
